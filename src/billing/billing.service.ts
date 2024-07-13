@@ -143,6 +143,7 @@ export class BillingService {
       );
 
       const subscription = response.data.data[0];
+      console.log(subscription)
       return subscription.status === 'active' ? { status: 200 } : { status: 400 };
     } catch (error) {
       console.log(error);
