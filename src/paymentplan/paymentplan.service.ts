@@ -1,28 +1,30 @@
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import axios from 'axios';
-import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class PaymentPlanService {
   private readonly flutterwaveUrl = 'https://api.flutterwave.com/v3/payment-plans';
   private readonly flutterwaveSecret = process.env.FLW_KEY;
 
-  constructor(private readonly prisma: PrismaService) {}
-
-  // Fetch all payment plans from local database
+  // Fetch all payment plans directly from Flutterwave
   async getPaymentPlans(): Promise<any> {
     try {
-      const paymentPlans = await this.prisma.paymentPlan.findMany();
-      return paymentPlans;
+      const response = await axios.get(this.flutterwaveUrl, {
+        headers: { Authorization: `Bearer ${this.flutterwaveSecret}` },
+      });
+      return response.data.data;
     } catch (error) {
       throw new HttpException('Failed to fetch payment plans', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
-  // Fetch a single payment plan from local database
+  // Fetch a single payment plan directly from Flutterwave
   async getPaymentPlan(planId: number): Promise<any> {
     try {
-      const paymentPlan = await this.prisma.paymentPlan.findUnique({ where: { planId } });
+      const response = await axios.get(`${this.flutterwaveUrl}/${planId}`, {
+        headers: { Authorization: `Bearer ${this.flutterwaveSecret}` },
+      });
+      const paymentPlan = response.data.data;
       if (!paymentPlan) {
         throw new HttpException('Payment plan not found', HttpStatus.NOT_FOUND);
       }
@@ -32,82 +34,39 @@ export class PaymentPlanService {
     }
   }
 
-  // Create a new payment plan on Flutterwave and save to local database
+  // Create a new payment plan directly on Flutterwave
   async createPaymentPlan(data: any): Promise<any> {
     try {
-      const { description, required_field, perk, ...flutterwaveData } = data;
-      const response = await axios.post(this.flutterwaveUrl, flutterwaveData, {
+      const response = await axios.post(this.flutterwaveUrl, data, {
         headers: { Authorization: `Bearer ${this.flutterwaveSecret}` },
       });
-      const paymentPlan = response.data.data;
-      console.log(paymentPlan)
-      // Save to local database
-      await this.prisma.paymentPlan.create({
-        data: {
-          planId: paymentPlan.id,
-          name: paymentPlan.name,
-          amount: paymentPlan.amount,
-          interval: paymentPlan.interval,
-          status: paymentPlan.status,
-          description: description ,
-          required_field: required_field,
-          perk: perk,
-        },
-      });
-
-      return paymentPlan;
+      return response.data.data;
     } catch (error) {
-      console.log(error)
       throw new HttpException('Failed to create payment plan', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
-  // Update a payment plan on Flutterwave and local database
+  // Update a payment plan directly on Flutterwave
   async updatePaymentPlan(planId: number, data: any): Promise<any> {
     try {
-      const { description, required_field, perk, ...flutterwaveData } = data;
-      const response = await axios.put(`${this.flutterwaveUrl}/${planId}`, flutterwaveData, {
+      const response = await axios.put(`${this.flutterwaveUrl}/${planId}`, data, {
         headers: { Authorization: `Bearer ${this.flutterwaveSecret}` },
       });
-      const paymentPlan = response.data.data;
-
-      // Update local database
-      await this.prisma.paymentPlan.update({
-        where: { planId },
-        data: {
-          name: paymentPlan.name,
-          amount: paymentPlan.amount,
-          interval: paymentPlan.interval,
-          status: paymentPlan.status,
-          description: description,
-          required_field: required_field,
-          perk: perk,
-        },
-      });
-
-      return paymentPlan;
+      return response.data.data;
     } catch (error) {
       throw new HttpException('Failed to update payment plan', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
-  // Cancel a payment plan on Flutterwave and update local database
+  // Cancel a payment plan directly on Flutterwave
   async removePaymentPlan(planId: number): Promise<any> {
     try {
-      const response = await axios.put(`${this.flutterwaveUrl}/${planId}/cancel`, {
+      const response = await axios.put(`${this.flutterwaveUrl}/${planId}/cancel`, {}, {
         headers: { Authorization: `Bearer ${this.flutterwaveSecret}` },
       });
-      const paymentPlan = response.data;
-
-      // Update local database
-      await this.prisma.paymentPlan.update({
-        where: { planId },
-        data: { status: 'cancelled' },
-      });
-
-      return paymentPlan;
+      return { message: 'Payment plan cancelled successfully', data: response.data };
     } catch (error) {
-      throw new HttpException(error?.response?.data?.message, HttpStatus.INTERNAL_SERVER_ERROR);
+      throw new HttpException(error?.response?.data?.message || 'Failed to cancel payment plan', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 }

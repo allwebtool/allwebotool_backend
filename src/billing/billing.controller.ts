@@ -3,6 +3,7 @@ import { BillingService } from './billing.service';
 import { CreateBillingDto } from './dto/create-billing.dto';
 import { UpdateBillingDto } from './dto/update-billing.dto';
 import { Request } from 'express';
+import { PublicRoute } from 'common/decorator/public.decorator';
 
 @Controller('billing')
 export class BillingController {
@@ -30,6 +31,16 @@ export class BillingController {
   async findOne(@Req() req: Request) {
     try {
       return await this.billingService.checkSubscriptionStatus(req);
+    } catch (error) {
+      throw new HttpException(error.message, HttpStatus.NOT_FOUND);
+    }
+  }
+
+
+  @Get('transactions')
+  async findSubs(@Req() req: Request) {
+    try {
+      return await this.billingService.checkCustomerTransactions(req);
     } catch (error) {
       throw new HttpException(error.message, HttpStatus.NOT_FOUND);
     }

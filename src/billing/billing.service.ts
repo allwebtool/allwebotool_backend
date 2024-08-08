@@ -34,6 +34,26 @@ export class BillingService {
 
   async createSub(paymentData: CollectCardPaymentDto) {
     try {
+      // Step 1: Check for existing active subscriptions
+      const existingSubscriptionsResponse = await axios.get(
+        `${this.flutterwaveUrl}/subscriptions`,
+        {
+          headers: { Authorization: `Bearer ${this.flutterwaveSecret}` },
+          params: { email: paymentData.email },
+        },
+      );
+  
+      const activeSubscriptions = (existingSubscriptionsResponse?.data?.data ?? [])
+        .filter((subscription: any) => subscription.status === 'active');
+  
+      if (activeSubscriptions.length > 0) {
+        throw new HttpException(
+          'User already has an active subscription',
+          HttpStatus.CONFLICT,
+        );
+      }
+  
+      // Step 2: Proceed to create a new subscription if no active subscriptions exist
       const subscriptionDetails = {
         tx_ref: paymentData.tx_ref,
         amount: paymentData.amount,
@@ -44,25 +64,27 @@ export class BillingService {
         plan: paymentData.payment_plan,
       };
   
-      try {
-        const response = await axios.post(
-          `${this.flutterwaveUrl}/subscriptions`,
-          subscriptionDetails,
-          {
-            headers: { Authorization: `Bearer ${this.flutterwaveSecret}` },
-          },
-        );
-        return response.data;
-      } catch (error) {
-        throw new HttpException(
-          error.response?.data?.message || 'Error creating subscription',
-          HttpStatus.BAD_REQUEST,
-        );
+      const response = await axios.post(
+        `${this.flutterwaveUrl}/subscriptions`,
+        subscriptionDetails,
+        {
+          headers: { Authorization: `Bearer ${this.flutterwaveSecret}` },
+        },
+      );
+  
+      return response.data;
+  
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error; // Re-throw custom exceptions
       }
-    }catch(e){
-      
+      throw new HttpException(
+        error.response?.data?.message || 'Error creating subscription',
+        HttpStatus.BAD_REQUEST,
+      );
     }
   }
+  
 
   async findAll() {
     try {
@@ -141,13 +163,40 @@ export class BillingService {
           params: { email: user.email },
         },
       );
+      const activeSubscriptions = (response?.data?.data ?? [])
+      .filter((subscription: any) => subscription.status === 'active')
+      .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-      const subscription = response.data.data[0];
-      console.log(subscription)
-      return subscription.status === 'active' ? { status: 200 } : { status: 400 };
+   
+      if (activeSubscriptions.length > 0) {
+        console.log(activeSubscriptions)
+        return activeSubscriptions
+      } else {
+        return { status: 400, message: 'No active subscriptions found' };
+      }
     } catch (error) {
-      console.log(error);
+      console.log(error.response);
       throw new HttpException('Failed to check subscription status', HttpStatus.BAD_REQUEST);
     }
   }
+
+  async checkCustomerTransactions(req: Request) {
+    try {
+      const user: any = req.user;
+      const response = await axios.get(
+        `${this.flutterwaveUrl}/transactions`,
+        {
+          headers: { Authorization: `Bearer ${this.flutterwaveSecret}` },
+          params: { customer_email: user.email, status: "successful" }, // Assuming transactions can be queried by customer email
+        },
+      )
+     
+      return response?.data?.data
+      
+    } catch (error) {
+      console.log(error.response.data);
+      throw new HttpException('Failed to check customer transactions', HttpStatus.BAD_REQUEST);
+    }
+  }
+  
 }
