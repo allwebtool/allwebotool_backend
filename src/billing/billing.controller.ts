@@ -3,7 +3,6 @@ import { BillingService } from './billing.service';
 import { CreateBillingDto } from './dto/create-billing.dto';
 import { UpdateBillingDto } from './dto/update-billing.dto';
 import { Request } from 'express';
-import { PublicRoute } from 'common/decorator/public.decorator';
 
 @Controller('billing')
 export class BillingController {

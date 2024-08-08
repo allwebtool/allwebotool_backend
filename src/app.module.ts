@@ -22,10 +22,10 @@ import { VideoModule } from './video/video.module';
   imports: [AppModule, 
     BullModule.forRoot({
       redis: {
-        host: 'allwebtool-do-user-14642751-0.c.db.ondigitalocean.com',
+        host: 'db-redis-nyc3-90505-do-user-14642751-0.m.db.ondigitalocean.com',
         port: 25061,
         username: 'default',
-        password: 'AVNS_ek5SzesxzssdgixzZj9',
+        password: 'AVNS_z2YRh9mfhoj3Oy3p5PP',
         tls: {}
       },
     }),
