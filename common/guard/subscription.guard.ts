@@ -24,14 +24,12 @@ export class SubscriptionGuard implements CanActivate {
     }
 
     const request = context.switchToHttp().getRequest();
-    const userId = request.user.email; 
-    console.log(userId)
+    const userId = request?.user?.email; 
     if (!userId){
       throw new HttpException("User not found", HttpStatus.FORBIDDEN)
     }
     try {
       const user = await this.prisma.user.findFirst({where:{email: userId}})
-      console.log(user)
       const isSubscribed = await this.billingService.checkSubscriptionStatus(userId);
 
       if (!isSubscribed) {
