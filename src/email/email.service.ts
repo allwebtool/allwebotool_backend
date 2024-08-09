@@ -11,8 +11,8 @@ export class EmailService {
     try{
         await this.mailerService.sendMail({
       to: user.email,
-      from: '"Marketscape Support" <support@marketscape.io>',
-      subject: 'Marketscape EMail verification',
+      from: '"Allwebtool" <hello@allwebtool.com>',
+      subject: 'Allwebtool EMail verification',
       template: './otp.template.ejs', // `.ejs` extension is appended automatically
       context: { // filling <%= %> brackets with content
         name: user.username,

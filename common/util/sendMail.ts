@@ -8,42 +8,15 @@ export const sendEmail = (to:string, otp:string, type?:string) => {
             secure: true,
             port: 465,
             auth: {
-              user: "support@marketscape.io",
-              pass: "5Rdwz3pbzdzd",
+              user: "hello@allwebtool.com",
+              pass: "uNv0KLERpvgR",
             },
           });
 
-          if(type === "no-reply"){
-            transporter = nodemailer.createTransport({
-                host: "smtp.zoho.com",
-                secure: true,
-                port: 465,
-                auth: {
-                  user: "no-reply@marketscape.io",
-                  pass: "WACZr7qAyy6b",
-                },
-              });
-
-          }else if(type === "me"){
-            transporter = nodemailer.createTransport({
-                host: "smtp.zoho.com",
-                secure: true,
-                port: 465,
-                auth: {
-                  user: "devsamahd@marketscape.io",
-                  pass: "91xst6SqYHwR",
-                },
-              });
-          }
-        // pass:MArketscape626@ 
-        // Email data
         const mailOptions = {
-            from: type === "me"?
-             'devsamahd@marketscape.io': 
-            type === "no-reply" ?
-            "no-reply@marketscape.io":"support@marketscape.io",
+            from:'hello@allwebtool.com',
             to: to, 
-            subject: 'MarketScape Email Verification',
+            subject: 'Allwebtool Email Verification',
             html: `<h1>${otp}</h1>`,
         };
         
