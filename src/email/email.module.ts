@@ -21,7 +21,7 @@ import { ConfigService } from '@nestjs/config';
           },
         },
         defaults: {
-          from: '"Marketscape Support" <hello@allwebtool.com>',
+          from: '"Allwebtool" <hello@allwebtool.com>',
         },
         template: {
           dir: join(__dirname,'..','..','email','templates'),
