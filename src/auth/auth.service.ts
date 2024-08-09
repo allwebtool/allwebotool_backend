@@ -110,7 +110,7 @@ export class AuthService {
           })
         } catch (error) {
           res.status(error.status).json({
-            message:error.message
+            message:error
           })
         }
       }
