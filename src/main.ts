@@ -6,7 +6,7 @@ import { CorsOptions } from '@nestjs/common/interfaces/external/cors-options.int
 
 async function bootstrap() {
   const corsOptions: CorsOptions = {
-    origin: ['http://localhost:3000', 'https://marketscape.io','https://*.marketspace.io'],
+    origin: ['http://localhost:3000', 'https://allwebtool.com','https://*.allwebtool.com'],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true, 
