@@ -106,7 +106,8 @@ export class AuthService {
           res.cookie('refresh_token', tokens.refresh_token, { httpOnly: true, secure: process.env.NODE_ENV !== 'dev', sameSite:"none" });
           return res.status(HttpStatus.OK).json({
             access_token: tokens.access_token,
-            role: user.role
+            role: user.role,
+            email: user.email
           })
         } catch (error) {
           res.status(error.status).json({
@@ -170,7 +171,8 @@ export class AuthService {
         // Send back the new access token
         res.status(HttpStatus.OK).json({
           access_token: tokens.access_token,
-          role: user.role
+          role: user.role,
+          email: user.email
         });
       } catch (error) {
         console.log(error)

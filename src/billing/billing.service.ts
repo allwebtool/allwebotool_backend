@@ -180,23 +180,6 @@ export class BillingService {
     }
   }
 
-  async checkCustomerTransactions(req: Request) {
-    try {
-      const user: any = req.user;
-      const response = await axios.get(
-        `${this.flutterwaveUrl}/transactions`,
-        {
-          headers: { Authorization: `Bearer ${this.flutterwaveSecret}` },
-          params: { customer_email: user.email, status: "successful" },
-        },
-      )
-     
-      return response?.data?.data
-      
-    } catch (error) {
-      console.log(error.response.data);
-      throw new HttpException('Failed to check customer transactions', HttpStatus.BAD_REQUEST);
-    }
-  }
+
   
 }
