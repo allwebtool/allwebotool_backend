@@ -14,8 +14,6 @@ model User {
  email_verified Boolean  @default(false)
  videos Video[]
  notifications Notification[]
-  subscription   Subscription[]
-
 
  @@map("users")
 }
@@ -64,34 +62,15 @@ model Notification {
 }
 
 
-model Subscription {
-  id              Int             @id @default(autoincrement())
-  userId          Int
-  pricingPlanId   Int
-  startDate       DateTime        @default(now())
-  endDate         DateTime?
-  status          SubscriptionStatus @default(ACTIVE)
-  user            User            @relation(fields: [userId], references: [id])
-  pricingPlan     PricingPlan     @relation(fields: [pricingPlanId], references: [id])
-  @@map("subscriptiona")
-
-}
-
 model PricingPlan {
   id             Int             @id @default(autoincrement())
   name           String
   description    String?
   price          Float
-  duration       Int             // Duration in days
-  subscriptions  Subscription[]
+  duration       Int            
   @@map("pricingplans")
 }
 
-enum SubscriptionStatus {
-  ACTIVE
-  INACTIVE
-  CANCELLED
-}
 
 model PaymentPlan {
   id             String   @id @default(cuid())

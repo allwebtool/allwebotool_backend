@@ -187,7 +187,7 @@ export class BillingService {
         `${this.flutterwaveUrl}/transactions`,
         {
           headers: { Authorization: `Bearer ${this.flutterwaveSecret}` },
-          params: { customer_email: user.email, status: "successful" }, // Assuming transactions can be queried by customer email
+          params: { customer_email: user.email, status: "successful" },
         },
       )
      

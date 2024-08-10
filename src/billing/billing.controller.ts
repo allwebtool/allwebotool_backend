@@ -35,16 +35,6 @@ export class BillingController {
     }
   }
 
-
-  @Get('transactions')
-  async findSubs(@Req() req: Request) {
-    try {
-      return await this.billingService.checkCustomerTransactions(req);
-    } catch (error) {
-      throw new HttpException(error.message, HttpStatus.NOT_FOUND);
-    }
-  }
-
   @Get('findme')
   async findMe(@Req() req: Request) {
     try {

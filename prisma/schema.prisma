@@ -84,7 +84,7 @@ model Subscription {
   user          User               @relation(fields: [userId], references: [id])
   pricingPlan   PricingPlan        @relation(fields: [pricingPlanId], references: [id])
 
-  @@map("subscriptiona")
+  @@map("subscriptions")
 }
 
 model PricingPlan {
