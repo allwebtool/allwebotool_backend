@@ -1,4 +1,4 @@
-import { Controller, Post, UseInterceptors, UploadedFiles, Req, BadRequestException } from '@nestjs/common';
+import { Controller, Post, UseInterceptors, UploadedFiles, Req, BadRequestException, Delete, Param } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { DigitalOceanService } from './digitalocean.service';
 import { Request } from 'express';
@@ -6,7 +6,6 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { generateSlug } from 'common/util/slugify';
 import { Queue } from 'bull';
 import { InjectQueue } from '@nestjs/bull';
-import { EnsureSubscription } from 'common/decorator/subscription.decorator';
 
 @Controller()
 export class DigitalOceanController {
@@ -22,7 +21,6 @@ export class DigitalOceanController {
     if (!files || files.length !== 2) {
       throw new BadRequestException('Two files (video and audio) are required');
     }
-
     const videoFile = files.find(file => file.mimetype.startsWith('video/'));
     const audioFile = files.find(file => file.mimetype.startsWith('audio/'));
 
@@ -60,5 +58,26 @@ export class DigitalOceanController {
     await this.videoQueue.add('process-video', { videoFile, audioFile, videoId: video.id, videoSlug: generateSlug(user.username)+'-result' });
     
     return { videoUrl };
+  }
+
+  @Delete('video/:id')
+  async deleteVideo(@Param('id') id: string) {
+    console.log(id)
+    const video = await this.prisma.video.findFirst({ where: { id: parseInt(id) } });
+    if (!video) {
+      throw new BadRequestException('Video not found');
+    }
+
+    await this.digitalOceanService.deleteFile(video.videoUrl);
+    await this.digitalOceanService.deleteFile(video.audioUrl);
+    if(video.resultUrl){
+      await this.digitalOceanService.deleteFile(video.resultUrl)
+      await this.digitalOceanService.deleteFile(video.thumbnailUrl)
+    }
+
+    // Delete video metadata from database
+    await this.prisma.video.delete({ where: { id: parseInt(id) } });
+
+    return { message: 'Video deleted successfully' };
   }
 }

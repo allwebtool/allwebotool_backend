@@ -1,5 +1,5 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import { S3Client } from '@aws-sdk/client-s3';
+import { DeleteObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import * as ffmpeg from 'fluent-ffmpeg';
 import { generateSlug } from 'common/util/slugify';
 import { Upload } from '@aws-sdk/lib-storage';
@@ -21,8 +21,23 @@ export class DigitalOceanService {
     });
   }
 
+  async deleteFile(key: string): Promise<void> {
+    const parsedUrl = new URL(key);
+      const keyg = decodeURIComponent(parsedUrl.pathname.substring(1));
+    try {
+      await this.s3Client.send(new DeleteObjectCommand({
+        Bucket: process.env.DO_S3_SPACENAME,
+        Key: keyg,
+      }));
+    } catch (error) {
+      throw new Error(`Failed to delete file from DigitalOcean: ${error.message}`);
+    }
+  }
+
+
   async uploadFile(buffer: Buffer, slug: string, filename: string): Promise<string> {
-    const key = `${generateSlug(slug)}/${filename}`;
+    const timestamp = new Date().toISOString();
+    const key = `${generateSlug(slug)}/${timestamp}-${filename}`;
     const body = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
 
     const upload = new Upload({
@@ -48,6 +63,8 @@ export class DigitalOceanService {
       });
     });
   }
+
+
 
   async validateFileDuration(url: string): Promise<void> {
     console.log(url);
