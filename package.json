@@ -6,10 +6,11 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "build": "nest build && npm run copy-templates",
+    "build": "npm run prestart && nest build && npm run copy-templates",
     "copy-templates": "copyfiles -u 1 src/email/templates/**/* dist",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
+    "prestart": "apt-get update && apt-get install -y ffmpeg",
     "db:migrate": "npx prisma-multischema && npm run push:schema",
     "gen:schema": "awk 1 ./prisma/models/**/*.prisma >> ./prisma/schema.prisma && npx prisma format",
     "push:schema": "npx prisma migrate dev",
