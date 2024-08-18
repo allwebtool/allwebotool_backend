@@ -20,11 +20,11 @@ export class VideoClientService {
 
   async uploadVideoAndAudio(videoFile: any, audioFile: any): Promise<any> {
     try {
-      console.log("hello here")
+      console.log(videoFile.originalname.replace(/\s+/g, '_').replace(/[^\w.-]/g, ''))
      
       const formData = new FormData();
       formData.append('video', Buffer.from(videoFile.buffer.data), videoFile.originalname.replace(/\s+/g, '_').replace(/[^\w.-]/g, ''))
-      formData.append('audio', Buffer.from(audioFile.buffer.data), audioFile.originalname.replace(/\s+/g, '_').replace(/[^\w.-]/g, ''));
+      formData.append('audio', Buffer.from(audioFile.buffer.data), audioFile.originalname.replace(/\s+/g, '_').replace(/[^\w.-]/g, ''))
 
       // Send POST request to upload the video and audio
       const response = await this.apiClient.post('/upload', formData);
