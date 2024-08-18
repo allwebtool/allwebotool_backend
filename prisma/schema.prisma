@@ -45,8 +45,9 @@ model Video {
   updatedAt DateTime @updatedAt
   userId    String   @db.ObjectId
 
-  videoUrl     String
-  audioUrl     String
+  status       String @default("initiated")
+  videoUrl     String?
+  audioUrl     String?
   resultUrl    String?
   thumbnailUrl String?
 

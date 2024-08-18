@@ -34,10 +34,12 @@ export class DigitalOceanController {
     if (!videoFile || !audioFile) {
       throw new BadRequestException('Both video and audio files are required');
     }
-
-    await this.videoQueue.add('process-video', { videoFile, audioFile, user});
+    const video = await this.prisma.video.create({
+      data: { userId: user.id},
+    });
+    await this.videoQueue.add('process-video', { videoFile, audioFile, videoData: video});
     
-    return { message: "success" };
+    return video;
   }
 
   @Delete('video/:id')
@@ -48,8 +50,8 @@ export class DigitalOceanController {
       throw new BadRequestException('Video not found');
     }
 
-    await this.digitalOceanService.deleteFile(video.videoUrl);
-    await this.digitalOceanService.deleteFile(video.audioUrl);
+    await this.digitalOceanService.deleteFile(video.videoUrl)
+    await this.digitalOceanService.deleteFile(video.audioUrl)
     if(video.resultUrl){
       await this.digitalOceanService.deleteFile(video.resultUrl)
       await this.digitalOceanService.deleteFile(video.thumbnailUrl)

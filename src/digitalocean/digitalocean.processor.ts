@@ -17,13 +17,14 @@ export class VideoProcessor {
 
   @Process('process-video')
   async handleVideoProcessing(job: Job) {
-    const { videoFile, audioFile, user } = job.data;
+    const { videoFile, audioFile, videoData } = job.data;
     
     try {
       const response = await this.videoClientService.uploadVideoAndAudio(videoFile, audioFile);
 
-      const video = await this.prisma.video.create({
-        data: { videoUrl: response.videoUrl, audioUrl: response.audioUrl, resultUrl: response.resultUrl, thumbnailUrl: response.thumbnailUrl, userId: user.id },
+      const video = await this.prisma.video.update({
+        where:{id: videoData.id},
+        data: { videoUrl: response.video_url, audioUrl: response.audio_url, resultUrl: response.result_url, thumbnailUrl: response.thumbnail_url, status:"successful" },
       });
 
       await this.notificationService.createNotification(video.userId, `#${video.id}: Your video is ready!`, video.resultUrl);
@@ -32,6 +33,10 @@ export class VideoProcessor {
       this.logger.log("Note sent", video.userId);
      return
     } catch (error) {
+      await this.prisma.video.update({
+        where:{id: videoData.id},
+        data: { status:"failed" },
+      });
       this.logger.error(`Failed to process video job: ${error.message}`, error.stack);
     }
   }

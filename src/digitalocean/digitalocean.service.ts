@@ -20,6 +20,7 @@ export class VideoClientService {
 
   async uploadVideoAndAudio(videoFile: any, audioFile: any): Promise<any> {
     try {
+      console.log("hello here")
      
       const formData = new FormData();
       formData.append('video', Buffer.from(videoFile.buffer.data), videoFile.originalname);
@@ -27,7 +28,6 @@ export class VideoClientService {
 
       // Send POST request to upload the video and audio
       const response = await this.apiClient.post('/upload', formData);
-      console.log(response)
       return response.data;
     } catch (error) {
       this.logger.error(`REST API error: ${error.message}`);
