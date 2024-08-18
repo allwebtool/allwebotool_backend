@@ -1,106 +1,47 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
-import { DeleteObjectCommand, S3Client } from '@aws-sdk/client-s3';
-import * as ffmpeg from 'fluent-ffmpeg';
-import { generateSlug } from 'common/util/slugify';
-import { Upload } from '@aws-sdk/lib-storage';
-import { promises as fs } from 'fs';
-import { join } from 'path';
+import { Injectable, Logger } from '@nestjs/common';
+import axios, { AxiosInstance } from 'axios';
+import * as FormData from "form-data"
 
 @Injectable()
-export class DigitalOceanService {
-  private s3Client: S3Client;
+export class VideoClientService {
+  private readonly logger = new Logger(VideoClientService.name);
+  private readonly apiClient: AxiosInstance;
 
   constructor() {
-    this.s3Client = new S3Client({
-      endpoint: process.env.DO_S3_ENDPOINT,
-      region: process.env.DO_S3_REGION,
-      credentials: {
-        accessKeyId: process.env.DO_S3_ACCESS_KEY,
-        secretAccessKey: process.env.DO_S3_SECRET_ACCESS_KEY,
+    this.apiClient = axios.create({
+      // baseURL: 'http://localhost:7860', 
+      baseURL: 'https://ashpexx-make-vid-talk.hf.space', 
+      timeout: 20 * 60 * 1000, // 20 minutes timeout
+      headers: {
+        'Content-Type': 'multipart/form-data',
       },
     });
   }
 
-  async deleteFile(key: string): Promise<void> {
-    const parsedUrl = new URL(key);
-      const keyg = decodeURIComponent(parsedUrl.pathname.substring(1));
+  async uploadVideoAndAudio(videoFile: any, audioFile: any): Promise<any> {
     try {
-      await this.s3Client.send(new DeleteObjectCommand({
-        Bucket: process.env.DO_S3_SPACENAME,
-        Key: keyg,
-      }));
+     
+      const formData = new FormData();
+      formData.append('video', Buffer.from(videoFile.buffer.data), videoFile.originalname);
+      formData.append('audio', Buffer.from(audioFile.buffer.data), audioFile.originalname);
+
+      // Send POST request to upload the video and audio
+      const response = await this.apiClient.post('/upload', formData);
+
+      return response.data;
     } catch (error) {
-      throw new Error(`Failed to delete file from DigitalOcean: ${error.message}`);
+      this.logger.error(`REST API error: ${error.message}`);
+      throw new Error(`Failed to upload video and audio: ${error.message}`);
     }
   }
 
-
-  async uploadFile(buffer: Buffer, slug: string, filename: string): Promise<string> {
-    const timestamp = new Date().toISOString();
-    const key = `${generateSlug(slug)}/${timestamp}-${filename}`;
-    const body = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
-
-    const upload = new Upload({
-      client: this.s3Client,
-      params: {
-        Bucket: process.env.DO_S3_SPACENAME,
-        Key: key,
-        Body: body,
-        ACL: 'public-read',
-      },
-    });
-
-    await upload.done();
-
-    return `https://${process.env.DO_S3_SPACENAME}.nyc3.digitaloceanspaces.com/${key}`;
-  }
-
-  async getFileDuration(url: string): Promise<number> {
-    return new Promise((resolve, reject) => {
-      ffmpeg.ffprobe(url, (err, metadata) => {
-        if (err) return reject(err);
-        resolve(metadata.format.duration);
-      });
-    });
-  }
-
-
-
-  async validateFileDuration(url: string): Promise<void> {
-    console.log(url);
-    const duration = await this.getFileDuration(url);
-    console.log(duration);
-
-    if (duration > 30) {
-      throw new BadRequestException('File exceeds 30 seconds');
+  async deleteFile(key: string): Promise<any> {
+    try {
+      const response = await this.apiClient.post('/delete-file', { key })
+      return response.data;
+    } catch (error) {
+      this.logger.error(`REST API error: ${error.message}`);
+      throw new Error(`Failed to delete file: ${error.message}`);
     }
-  }
-
-  async generateThumbnail(videoUrl: string, folder: string, slug: string): Promise<string> {
-    const thumbnailFilename = `${slug}-thumbnail.png`;
-    const thumbnailPath = join(folder, thumbnailFilename);
-
-    return new Promise((resolve, reject) => {
-      ffmpeg(videoUrl)
-        .on('end', async () => {
-          try {
-            const thumbnailBuffer = await fs.readFile(thumbnailPath);
-            const thumbnailUrl = await this.uploadFile(thumbnailBuffer, folder, thumbnailFilename);
-            await fs.unlink(thumbnailPath); // Clean up the temporary thumbnail file
-            resolve(thumbnailUrl);
-          } catch (err) {
-            reject(err);
-          }
-        })
-        .on('error', (err) => {
-          reject(err);
-        })
-        .screenshots({
-          count: 1,
-          folder,
-          filename: thumbnailFilename,
-          size: '320x240',
-        });
-    });
   }
 }

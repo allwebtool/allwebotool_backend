@@ -1,9 +1,9 @@
 import { Processor, Process } from '@nestjs/bull';
 import { Job } from 'bull';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { DigitalOceanService } from './digitalocean.service';
 import { NotificationService } from 'src/notification/notification.service';
 import { Logger } from '@nestjs/common';
+import { VideoClientService } from './digitalocean.service';
 
 @Processor('video-processing')
 export class VideoProcessor {
@@ -11,25 +11,19 @@ export class VideoProcessor {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly digitalOceanService: DigitalOceanService,
+    private readonly videoClientService: VideoClientService,
     private readonly notificationService: NotificationService,
   ) {}
 
   @Process('process-video')
   async handleVideoProcessing(job: Job) {
-    const { videoFile, audioFile, videoId, videoSlug } = job.data;
-    this.logger.log(`Processing video job: ${videoId}`);
-
+    const { videoFile, audioFile, user } = job.data;
+    
     try {
-      this.logger.log("Simulating third-party API processing");
-      await new Promise(resolve => setTimeout(resolve, 10 * 1000));
-      
-      const videoUrl = await this.digitalOceanService.uploadFile(videoFile.buffer, videoSlug, videoFile.originalname);
-      const thumbnailUrl = await this.digitalOceanService.generateThumbnail(videoUrl, videoSlug+'thumbnail', videoSlug);
+      const response = await this.videoClientService.uploadVideoAndAudio(videoFile, audioFile);
 
-      const video = await this.prisma.video.update({
-        where: { id: videoId },
-        data: { resultUrl: videoUrl, thumbnailUrl },
+      const video = await this.prisma.video.create({
+        data: { videoUrl: response.videoUrl, audioUrl: response.audioUrl, resultUrl: response.resultUrl, thumbnailUrl: response.thumbnailUrl, userId: user.id },
       });
 
       await this.notificationService.createNotification(video.userId, `#${video.id}: Your video is ready!`, video.resultUrl);

@@ -23,7 +23,7 @@ export class VideoService {
     return videos;
   }
 
-  async findOne(id: number) {
+  async findOne(id: string) {
     const video = await this.prisma.video.findUnique({
       where: { id },
     });
@@ -35,7 +35,7 @@ export class VideoService {
     return video;
   }
 
-  async remove(id: number) {
+  async remove(id: string) {
     const video = await this.prisma.video.delete({
       where: { id },
     });

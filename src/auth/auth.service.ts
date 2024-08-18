@@ -116,7 +116,7 @@ export class AuthService {
         }
       }
 
-    async logout(userId: number, req: Request, res: Response){
+    async logout(userId: string, req: Request, res: Response){
       const rt2bd = req.cookies["refresh_token"]
       
       await this.prisma.rtHash.deleteMany({
@@ -230,11 +230,12 @@ export class AuthService {
       }
   }
   
+  
   hashData(data: string){
       return argon.hash(data)
   }
 
-  async getToken(userId: number, email: string){
+  async getToken(userId: string, email: string){
       const accessToken= this.jwtService.signAsync({
           sub: userId,
           email
@@ -259,7 +260,7 @@ export class AuthService {
       }
   }
 
-  async updateRtHash(userId: number, rt: string){
+  async updateRtHash(userId: string, rt: string){
       
 
       

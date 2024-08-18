@@ -22,10 +22,10 @@ import { VideoModule } from './video/video.module';
   imports: [AppModule, 
     BullModule.forRoot({
       redis: {
-        host: 'db-redis-nyc3-90505-do-user-14642751-0.m.db.ondigitalocean.com',
+        host: 'db-redis-nyc3-61372-do-user-14642751-0.g.db.ondigitalocean.com',
         port: 25061,
         username: 'default',
-        password: 'AVNS_z2YRh9mfhoj3Oy3p5PP',
+        password: 'AVNS_ByzibJcl1sy5XBa5Cg6',
         tls: {}
       },
     }),
@@ -59,4 +59,3 @@ export class AppModule implements NestModule {
     consumer.apply(ReqloggerMiddleware).forRoutes('*');
   }
 }
-

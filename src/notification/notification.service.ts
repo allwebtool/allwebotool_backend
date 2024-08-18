@@ -9,7 +9,7 @@ export class NotificationService {
     private readonly notificationGateway: MyWebSocketGateway,
   ) {}
 
-  async createNotification(userId: number, message: string, url: string) {
+  async createNotification(userId: string, message: string, url: string) {
     await this.prisma.notification.create({
       data: {
         userId,
@@ -19,7 +19,7 @@ export class NotificationService {
     });
   }
 
-  sendNotificationToUser(userId: number, payload: any): void {
+  sendNotificationToUser(userId: string, payload: any): void {
     this.notificationGateway.server.to(userId.toString()).emit('new_notification', payload);
   }
 }

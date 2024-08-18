@@ -1,17 +1,18 @@
 import { Controller, Post, UseInterceptors, UploadedFiles, Req, BadRequestException, Delete, Param } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
-import { DigitalOceanService } from './digitalocean.service';
 import { Request } from 'express';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { generateSlug } from 'common/util/slugify';
 import { Queue } from 'bull';
 import { InjectQueue } from '@nestjs/bull';
+import { VideoClientService } from './digitalocean.service';
+import { PublicRoute } from 'common/decorator/public.decorator';
 
 @Controller()
 export class DigitalOceanController {
   constructor(
     @InjectQueue('video-processing') private readonly videoQueue: Queue,
-    private readonly digitalOceanService: DigitalOceanService,
+    private readonly digitalOceanService: VideoClientService,
     private readonly prisma: PrismaService
   ) {}
 
@@ -21,6 +22,12 @@ export class DigitalOceanController {
     if (!files || files.length !== 2) {
       throw new BadRequestException('Two files (video and audio) are required');
     }
+    const us:any = req?.user
+    const user = await this.prisma.user.findFirst({ where: { email: us.email } });
+
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
     const videoFile = files.find(file => file.mimetype.startsWith('video/'));
     const audioFile = files.find(file => file.mimetype.startsWith('audio/'));
 
@@ -28,42 +35,15 @@ export class DigitalOceanController {
       throw new BadRequestException('Both video and audio files are required');
     }
 
-    const us:any = req?.user
-
-    const user = await this.prisma.user.findFirst({ where: { email: us.email } });
-
-    if (!user) {
-      throw new BadRequestException('User not found');
-    }
-
-    const videoSlug = generateSlug(user.username) + '-video';
-    const audioSlug = generateSlug(user.username) + '-audio';
-
-    const videoUrl = await this.digitalOceanService.uploadFile(videoFile.buffer, videoSlug, videoFile.originalname);
-    const audioUrl = await this.digitalOceanService.uploadFile(audioFile.buffer, audioSlug, audioFile.originalname);
-
-    // Validate durations
-    await this.digitalOceanService.validateFileDuration(videoUrl);
-    await this.digitalOceanService.validateFileDuration(audioUrl);
-
-    // Save file metadata to the database
-    const video = await this.prisma.video.create({
-      data: {
-        userId: user.id,
-        videoUrl,
-        audioUrl,
-      },
-    });
-  
-    await this.videoQueue.add('process-video', { videoFile, audioFile, videoId: video.id, videoSlug: generateSlug(user.username)+'-result' });
+    await this.videoQueue.add('process-video', { videoFile, audioFile, user});
     
-    return { videoUrl };
+    return { message: "success" };
   }
 
   @Delete('video/:id')
   async deleteVideo(@Param('id') id: string) {
     console.log(id)
-    const video = await this.prisma.video.findFirst({ where: { id: parseInt(id) } });
+    const video = await this.prisma.video.findFirst({ where: { id: id } });
     if (!video) {
       throw new BadRequestException('Video not found');
     }
@@ -76,7 +56,7 @@ export class DigitalOceanController {
     }
 
     // Delete video metadata from database
-    await this.prisma.video.delete({ where: { id: parseInt(id) } });
+    await this.prisma.video.delete({ where: { id: id  } });
 
     return { message: 'Video deleted successfully' };
   }
