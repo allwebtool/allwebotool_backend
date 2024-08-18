@@ -8,7 +8,6 @@
   "scripts": {
     "build": "nest build && npm run copy-templates && npm run copy-proto",
     "copy-templates": "copyfiles -u 1 src/email/templates/**/* dist",
-    "copy-proto": "copyfiles -u 1 proto/* dist/proto",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "gen:schema": "npx prisma format",
