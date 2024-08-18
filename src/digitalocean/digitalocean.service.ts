@@ -27,7 +27,7 @@ export class VideoClientService {
 
       // Send POST request to upload the video and audio
       const response = await this.apiClient.post('/upload', formData);
-
+      console.log(response)
       return response.data;
     } catch (error) {
       this.logger.error(`REST API error: ${error.message}`);
