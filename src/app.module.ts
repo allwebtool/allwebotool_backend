@@ -13,22 +13,12 @@ import { ReqloggerMiddleware } from './reqlogger/reqlogger.middleware';
 import { BillingModule } from './billing/billing.module';
 import { WebSocketModule } from './websocket/websocket.module';
 import { NotificationModule } from './notification/notification.module';
-import { BullModule } from '@nestjs/bull';
 import { PaymentplanModule } from './paymentplan/paymentplan.module';
 import { UserModule } from './user/user.module';
 import { VideoModule } from './video/video.module';
 
 @Module({
   imports: [AppModule, 
-    BullModule.forRoot({
-      redis: {
-        host: 'db-redis-nyc3-61372-do-user-14642751-0.g.db.ondigitalocean.com',
-        port: 25061,
-        username: 'default',
-        password: 'AVNS_ByzibJcl1sy5XBa5Cg6',
-        tls: {}
-      },
-    }),
     ConfigModule.forRoot({ isGlobal: true }), 
     AuthModule,
     EmailModule, 

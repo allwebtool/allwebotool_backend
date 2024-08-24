@@ -1,45 +1,151 @@
-import { Controller, Post, UseInterceptors, UploadedFiles, Req, BadRequestException, Delete, Param } from '@nestjs/common';
+import { Controller, Post, UseInterceptors, UploadedFiles, Req, BadRequestException, Get, Param, Delete } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
+import { DigitalOceanService } from './digitalocean.service';
 import { Request } from 'express';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { generateSlug } from 'common/util/slugify';
-import { Queue } from 'bull';
-import { InjectQueue } from '@nestjs/bull';
-import { VideoClientService } from './digitalocean.service';
-import { PublicRoute } from 'common/decorator/public.decorator';
 
 @Controller()
 export class DigitalOceanController {
   constructor(
-    @InjectQueue('video-processing') private readonly videoQueue: Queue,
-    private readonly digitalOceanService: VideoClientService,
+    private readonly digitalOceanService: DigitalOceanService,
     private readonly prisma: PrismaService
   ) {}
 
   @Post('upload')
   @UseInterceptors(FilesInterceptor('files', 2))
   async upload(@UploadedFiles() files: Express.Multer.File[], @Req() req: Request) {
+
+    try{
     if (!files || files.length !== 2) {
       throw new BadRequestException('Two files (video and audio) are required');
     }
-    const us:any = req?.user
-    const user = await this.prisma.user.findFirst({ where: { email: us.email } });
 
-    if (!user) {
-      throw new BadRequestException('User not found');
-    }
     const videoFile = files.find(file => file.mimetype.startsWith('video/'));
     const audioFile = files.find(file => file.mimetype.startsWith('audio/'));
-
     if (!videoFile || !audioFile) {
       throw new BadRequestException('Both video and audio files are required');
     }
+
+    const user = await this.getUserFromRequest(req);
+
+    const { videoUrl, audioUrl } = await this.uploadFilesToDigitalOcean(user.username, videoFile, audioFile);
+    const uniqueSuffix = `${Date.now()}`;
+  const thumbnailFileName = `${generateSlug(user.username)}-${uniqueSuffix}-thumbnail.jpg`;
+
+  // Generate thumbnail from the video file
+  const thumbnail = await this.digitalOceanService.generateThumbnail(videoUrl, 'thumbnails', thumbnailFileName);
+
+    // Newport AI API call
+    const taskId = await this.processVideoWithNewportAI(videoUrl, audioUrl);
+
+    // Save file metadata to the database
     const video = await this.prisma.video.create({
-      data: { userId: user.id},
+      data: {
+        userId: user.id,
+        videoUrl,
+        audioUrl,
+        thumbnailUrl: thumbnail,
+        taskId
+      }
     });
-    await this.videoQueue.add('process-video', { videoFile, audioFile, videoData: video});
-    
-    return video;
+
+    return video
+  }catch(e){
+    console.log(e)
+    throw new BadRequestException(e?.response?.message || e.message);
+  }
+  }
+
+  private async getUserFromRequest(req: Request) {
+    const us: any = req?.user;
+
+    const user = await this.prisma.user.findFirst({ where: { email: us.email } });
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    return user;
+  }
+
+  private async uploadFilesToDigitalOcean(username: string, videoFile: Express.Multer.File, audioFile: Express.Multer.File) {
+    const videoSlug = generateSlug(username) + '-video';
+    const audioSlug = generateSlug(username) + '-audio';
+
+    const videoUrl = await this.digitalOceanService.uploadFile(videoFile.buffer, videoSlug, videoFile.originalname);
+    const audioUrl = await this.digitalOceanService.uploadFile(audioFile.buffer, audioSlug, audioFile.originalname);
+
+    // Validate durations
+    await this.digitalOceanService.validateFileDuration(videoUrl);
+    await this.digitalOceanService.validateFileDuration(audioUrl);
+
+    return { videoUrl, audioUrl };
+  }
+
+  private async processVideoWithNewportAI(videoUrl: string, audioUrl: string): Promise<string> {
+    const myHeaders = new Headers({
+      "Content-Type": "application/json",
+      "Authorization": "Bearer 86271a98facf446d8922569799589b26"
+    });
+
+    const raw = JSON.stringify({
+      "srcVideoUrl": videoUrl,
+      "audioUrl": audioUrl,
+      "videoParams": {
+        "video_bitrate": 0,
+        "video_width": 0,
+        "video_height": 0,
+        "video_enhance": 1
+      }
+    });
+
+    const requestOptions = {
+      method: "POST",
+      headers: myHeaders,
+      body: raw,
+    };
+
+    try {
+      const response = await fetch("https://api.newportai.com/api/async/talking_face", requestOptions);
+      const result = await response.json();
+
+      if (!result?.data?.taskId) {
+        throw new Error('Failed to retrieve taskId from Newport AI');
+      }
+
+      return result.data.taskId;
+    } catch (error) {
+      console.error("Error during Newport AI API call:", error);
+      throw new Error('Newport AI API call failed');
+    }
+  }
+
+  @Get('upload/:taskId')
+  async pollForResult(@Param('taskId') taskId: string) {
+    const myHeaders = new Headers({
+      "Content-Type": "application/json",
+      "Authorization": "Bearer 86271a98facf446d8922569799589b26"
+    });
+
+    try {
+      const result = await this.fetchAsyncResult(taskId, myHeaders);
+
+      if (result?.code === 0) {
+        await this.updateVideoResultUrl(taskId, result?.data?.videos[0]?.videoUrl);
+        return { status: "success" };
+      }
+
+      if (result?.message === 'failed') {
+        await this.updateVideoStatus(taskId, "failed");
+        throw new Error('Task failed');
+      }
+
+      return { status: "processing" };
+    } catch (error) {
+      console.error("Error during polling:", error);
+      await this.updateVideoStatus(taskId, "failed");
+      throw new Error('Task failed');
+    }
   }
 
   @Delete('video/:id')
@@ -52,14 +158,37 @@ export class DigitalOceanController {
 
     await this.digitalOceanService.deleteFile(video.videoUrl)
     await this.digitalOceanService.deleteFile(video.audioUrl)
-    if(video.resultUrl){
-      await this.digitalOceanService.deleteFile(video.resultUrl)
-      await this.digitalOceanService.deleteFile(video.thumbnailUrl)
-    }
+    await this.digitalOceanService.deleteFile(video.thumbnailUrl)
+    
 
     // Delete video metadata from database
-    await this.prisma.video.delete({ where: { id: id  } });
+    await this.prisma.video.delete({ where: { id: id } });
 
     return { message: 'Video deleted successfully' };
+  }
+
+  private async fetchAsyncResult(taskId: string, headers: HeadersInit) {
+    const requestOptions = {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ taskId }),
+    };
+
+    const response = await fetch("https://api.newportai.com/api/getAsyncResult", requestOptions);
+    return response.json();
+  }
+
+  private async updateVideoResultUrl(taskId: string, resultUrl: string) {
+    await this.prisma.video.updateMany({
+      where: { taskId },
+      data: { resultUrl, status: "successful" }
+    });
+  }
+
+  private async updateVideoStatus(taskId: string, status: string) {
+    await this.prisma.video.updateMany({
+      where: { taskId },
+      data: { status }
+    });
   }
 }

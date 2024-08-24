@@ -46,6 +46,7 @@ model Video {
   userId    String   @db.ObjectId
 
   status       String  @default("initiated")
+  taskId       String
   videoUrl     String?
   audioUrl     String?
   resultUrl    String?
