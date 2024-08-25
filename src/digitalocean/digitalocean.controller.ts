@@ -67,13 +67,18 @@ export class DigitalOceanController {
 
     return user;
   }
+  private sanitizeFilename = (filename:string) => {
+    return filename
+      .replace(/\s+/g, '_')    
+      .replace(/[^a-zA-Z0-9_.-]/g, '')
+  }
 
   private async uploadFilesToDigitalOcean(username: string, videoFile: Express.Multer.File, audioFile: Express.Multer.File) {
     const videoSlug = generateSlug(username) + '-video';
     const audioSlug = generateSlug(username) + '-audio';
 
-    const videoUrl = await this.digitalOceanService.uploadFile(videoFile.buffer, videoSlug, videoFile.originalname);
-    const audioUrl = await this.digitalOceanService.uploadFile(audioFile.buffer, audioSlug, audioFile.originalname);
+    const videoUrl = await this.digitalOceanService.uploadFile(videoFile.buffer, videoSlug, this.sanitizeFilename(videoFile.originalname));
+    const audioUrl = await this.digitalOceanService.uploadFile(audioFile.buffer, audioSlug, this.sanitizeFilename(audioFile.originalname));
 
     // Validate durations
     await this.digitalOceanService.validateFileDuration(videoUrl);
