@@ -12,24 +12,43 @@ export class BillingService {
     this.flutterwaveSecret = process.env.FLW_KEY;
   }
   
-
-
   async findOne(req: Request) {
     try {
       const user: any = req.user;
-      const response = await axios.get(
-        `${this.flutterwaveUrl}/subscriptions`,
-        {
-          headers: { Authorization: `Bearer ${this.flutterwaveSecret}` },
-          params: { email: user.email },
-        },
-      );
-
-      const subscription = response.data.data
-      if (!subscription) {
+  
+      // Fetch subscriptions
+      const response = await axios.get(`${this.flutterwaveUrl}/subscriptions`, {
+        headers: { Authorization: `Bearer ${this.flutterwaveSecret}` },
+        params: { email: user.email },
+      });
+  
+      const subscriptions = response.data.data;
+  
+      if (!subscriptions || subscriptions.length === 0) {
         throw new HttpException('Subscription not found', HttpStatus.NOT_FOUND);
       }
-      return subscription;
+  
+      // Fetch plan details for each subscription
+      const enrichedSubscriptions = await Promise.all(
+        subscriptions.map(async (subscription: any) => {
+          try {
+            const planResponse = await axios.get(`${this.flutterwaveUrl}/payment-plans/${subscription.plan}`, {
+              headers: { Authorization: `Bearer ${this.flutterwaveSecret}` },
+            });
+            return {
+              ...subscription,
+              plan: planResponse.data.data, // Add plan details to the subscription object
+            };
+      
+
+          } catch (error) {
+            console.error(`Failed to fetch plan for subscription ID: ${subscription.id}`);
+            return subscription; // If plan fetch fails, return the subscription without plan details
+          }
+        })
+      );
+  
+      return enrichedSubscriptions;
     } catch (error) {
       throw new HttpException(error.response?.data?.message || 'Error fetching subscription', HttpStatus.NOT_FOUND);
     }
@@ -38,14 +57,31 @@ export class BillingService {
   async remove(id: number) {
     try {
       // Delete subscription in Flutterwave
-      const response = await axios.delete(
-        `${this.flutterwaveUrl}/subscriptions/${id}`,
+      const response = await axios.put(
+        `${this.flutterwaveUrl}/subscriptions/${id}/cancel`,
         {
           headers: { Authorization: `Bearer ${this.flutterwaveSecret}` },
         },
       );
 
-      return { message: 'Subscription deleted successfully', data: response.data };
+      return { message: 'Subscription deactivated successfully', data: response.data };
+    } catch (error) {
+      console.log(error)
+      throw new HttpException(error.response?.data?.message || 'Error deleting subscription', HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  async reactivate(id: number) {
+    try {
+      // Delete subscription in Flutterwave
+      const response = await axios.put(
+        `${this.flutterwaveUrl}/subscriptions/${id}/activate`,
+        {
+          headers: { Authorization: `Bearer ${this.flutterwaveSecret}` },
+        },
+      );
+
+      return { message: 'Subscription deactivated successfully', data: response.data };
     } catch (error) {
       throw new HttpException(error.response?.data?.message || 'Error deleting subscription', HttpStatus.BAD_REQUEST);
     }
@@ -61,6 +97,7 @@ export class BillingService {
           params: { email: user.email },
         },
       );
+
       const activeSubscriptions = (response?.data?.data ?? [])
       .filter((subscription: any) => subscription.status === 'active')
       .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
