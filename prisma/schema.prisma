@@ -21,8 +21,12 @@ model User {
   rtHash         RtHash[]
   status         String         @default("active")
   email_verified Boolean        @default(false)
+  cardToken String?
+  lastDigit Int?
+
   videos         Video[]
   notifications  Notification[]
+  transactions Transaction[]
 
   @@map("users")
 }
@@ -70,4 +74,31 @@ model Notification {
   user User @relation(fields: [userId], references: [id])
 
   @@map("notifications")
+}
+
+model Transaction {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  refId     String
+  amount    Float    
+  type      Transtype
+  status    Statustype
+  createdAt DateTime @default(now()) 
+  updatedAt DateTime @updatedAt 
+  points    Float   
+   
+  user User @relation(fields: [userId], references: [id])
+
+
+  @@map("transactions")
+}
+
+enum Transtype {
+  credit
+  debit
+}
+enum Statustype {
+  initiated
+  failed
+  successful
 }
