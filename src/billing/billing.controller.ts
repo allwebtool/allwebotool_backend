@@ -1,48 +1,56 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete,  HttpException, HttpStatus, Req } from '@nestjs/common';
+import { Controller, Post, Body, Param, Req } from '@nestjs/common';
 import { BillingService } from './billing.service';
 import { Request } from 'express';
+
+
+type VerifyPaymentDto = {
+  email: string;
+  tx_ref: string;
+  transaction_id: string;
+  status: string;
+};
 
 @Controller('billing')
 export class BillingController {
   constructor(private readonly billingService: BillingService) {}
 
-
-
-  @Get('subscribe')
-  async findOne(@Req() req: Request) {
-    try {
-      return await this.billingService.checkSubscriptionStatus(req);
-    } catch (error) {
-      throw new HttpException(error.message, HttpStatus.NOT_FOUND);
-    }
-  }
-     @Get('findme')
-  async findMe(@Req() req: Request) {
-    try {
-      const res = await this.billingService.findOne(req);
-      console.log(res)
-      return res
-    } catch (error) {
-      throw new HttpException(error.message, HttpStatus.NOT_FOUND);
-    }
-  }
-  @Get('reactivate/:id')
-  async reactivate(@Param('id') id: number) {
-    try {
-      return await this.billingService.reactivate(id);
-    } catch (error) {
-      throw new HttpException(error.message, HttpStatus.NOT_FOUND);
-    }
+  // Endpoint to initialize payment
+  @Post('initialize')
+  async initializePayment(
+    @Req() req:Request,
+    @Body('amount') amount: number,
+  ) {
+    console.log(amount, req.user)
+    const user:any = req.user
+    return this.billingService.initializePayment(user.email as string, amount);
   }
 
- 
-
-  @Get('deactivate/:id')
-  async remove(@Param('id') id: number) {
-    try {
-      return await this.billingService.remove(+id);
-    } catch (error) {
-      throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
+  // Endpoint to verify a payment
+  @Post('verify')
+  async verifyPayment(
+    @Body('transaction_id') transaction_id: string,
+    @Body('tx_ref') tx_ref: string,
+    @Body('status') status: string,
+    @Req() req: Request,
+  ) {
+    const user:any = req.user
+    const verifyPaymentData:VerifyPaymentDto ={
+      email: user.email,
+      tx_ref, 
+      transaction_id,
+      status
     }
+
+    return this.billingService.verifyPayment(verifyPaymentData);
+  }
+
+  // Auto-bill endpoint to charge a saved card token
+  @Post('auto-bill')
+  async autoBill(
+    @Body('token') token: string,
+    @Req() req: Request,
+    @Body('amount') amount: number,
+  ) {
+    return this.billingService.autoBill(token, req.user as string, amount);
   }
 }

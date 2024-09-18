@@ -190,7 +190,7 @@ export class DigitalOceanController {
     });
   }
 
-  private async updateVideoStatus(taskId: string, status: string) {
+  private async updateVideoStatus(taskId: string, status: any) {
     await this.prisma.video.updateMany({
       where: { taskId },
       data: { status }

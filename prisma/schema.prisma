@@ -27,8 +27,12 @@ model User {
   videos         Video[]
   notifications  Notification[]
   transactions Transaction[]
+  tts VoiceClone[]
+
 
   @@map("users")
+  FaceEditor FaceEditor[]
+  ImageEditor ImageEditor[]
 }
 
 model RtHash {
@@ -41,26 +45,6 @@ model RtHash {
   rtHash String
 
   @@map("rthashs")
-}
-
-model Video {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  userId    String   @db.ObjectId
-
-  status       String  @default("initiated")
-  taskId       String
-  videoUrl     String?
-  audioUrl     String?
-  resultUrl    String?
-  thumbnailUrl String?
-
-  // Add other fields as needed
-
-  user User @relation(fields: [userId], references: [id])
-
-  @@map("videos")
 }
 
 model Notification {
@@ -92,6 +76,68 @@ model Transaction {
 
   @@map("transactions")
 }
+
+model Video {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    String   @db.ObjectId
+
+  status       Statustype  @default(initiated)
+  taskId       String
+  videoUrl     String?
+  audioUrl     String?
+  resultUrl    String?
+  thumbnailUrl String?
+
+  // Add other fields as needed
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("videos")
+}
+
+
+  model VoiceClone {
+    id        String   @id @default(auto()) @map("_id") @db.ObjectId
+    name      String
+    voiceId    String   @unique
+    userId      String  @db.ObjectId
+    resultUrl  String?
+    status       Statustype  @default(initiated)
+    
+
+    user User @relation(fields: [userId], references: [id])
+  }
+
+  model FaceEditor {
+    id        String   @id @default(auto()) @map("_id") @db.ObjectId
+    
+    faceId    String?   @unique
+    userId      String  @db.ObjectId
+    action        String
+    mainImageUrl  String
+    faceImageUrl  String?
+    resultUrl  String?
+    status       Statustype  @default(initiated)
+    
+
+    user User @relation(fields: [userId], references: [id])
+  }
+
+  model ImageEditor {
+    id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  
+    imageId    String? @unique
+    userId      String  @db.ObjectId
+    firstImageUrl     String?
+    secondImageUrl     String?
+    resultUrl  String?
+    status       Statustype  @default(initiated)
+    
+
+    user User @relation(fields: [userId], references: [id])
+  }
 
 enum Transtype {
   credit

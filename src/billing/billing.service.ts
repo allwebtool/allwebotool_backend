@@ -1,6 +1,14 @@
 import { Injectable, HttpException } from '@nestjs/common';
 import axios from 'axios';
+import { randomUUID } from 'crypto';
 import { PrismaService } from 'src/prisma/prisma.service';
+
+type VerifyPaymentDto = {
+  email: string;
+  tx_ref: string;
+  transaction_id: string;
+  status: string;
+};
 
 @Injectable()
 export class BillingService {
@@ -11,28 +19,51 @@ export class BillingService {
   constructor(private readonly prisma: PrismaService) {
     this.flutterwaveUrl = process.env.FLUTTERWAVE_URL;
     this.flutterwaveSecret = process.env.FLW_KEY;
-    this.valuePerPoint = 0.5
+    this.valuePerPoint = 4
   }
   
-  async initializePayment(email: string, amount: number, phone_number: string, name: string, userId:string): Promise<any> {
+  async initializePayment(uremail:string, amount: number): Promise<any> {
     try {
+      const points = amount/this.valuePerPoint
+
+      const user = await this.prisma.user.findFirst({where:{email: uremail}})
+      const token = user.cardToken
+      if (token){
+        const res = await this.autoBill(token,user.email, amount)
+        console.log(res.data)
+        await this.prisma.transaction.create({data:{
+          userId: user.id,
+          refId: res.data.tx_ref,
+          points,
+          amount: amount,       
+          type: "credit",
+          status: "successful"
+        }})
+        
+        return {url: "/billing/verify?autobill=true"}
+      }
+      const tx_ref =  `allwebtool-${randomUUID()+Date.now()}`
+
       const response = await axios.post(
         this.flutterwaveUrl+'/payments',
         {
-          tx_ref: `omashu-${Date.now()}`,
+          tx_ref,
           amount: amount,
-          currency: 'USD',
-          redirect_url: `${process.env.BASE_URL}/payment/callback`,
+          currency: 'NGN',
+          redirect_url: `http://localhost:3000/billing/verify`,
           payment_options: 'card',
           customer: {
-            email: email,
-            phonenumber: phone_number,
-            name: name,
+            email: user.email,
+            name: user.username
           },
           customizations: {
             title: 'Allwebtool Points Purchase',
             description: 'Purchase points to use on Allwebtool platform',
             logo: 'https://cdn.allwebtool.com/allwebtool_assets/logo.png',
+          },
+          meta: {
+            payment_option: "card",
+            color: "#00B4D8"
           },
         },
         {
@@ -42,27 +73,35 @@ export class BillingService {
           },
         },
       );
-
-      const points = amount/this.valuePerPoint
+      console.log(response.data)
 
       await this.prisma.transaction.create({data:{
-        userId,
-        refId: response.data.refId,
+        refId: tx_ref,
+        userId: user.id,
         points,
         amount: amount,       
         type: "credit",
         status: "initiated"
       }})
-      return response.data;
+        return {url: response.data.data.link}
+        
     } catch (error) {
+      console.log(error)
       throw new HttpException(error.response.data, error.response.status);
     }
   }
 
-  async verifyPayment(transactionId: string, userEmail:string): Promise<any> {
+  async verifyPayment(details: VerifyPaymentDto): Promise<any> {
+      
+    const user = await this.prisma.user.findFirst({where:{email: details.email}})
+    const trans = await this.prisma.transaction.findFirst({where:{userId: user.id, refId:details.tx_ref, status: "initiated"}})
+    console.log(user,trans)
+    if(!trans) return {message: "no longer active"}
+    if(details.status !== "successful") return await this.prisma.transaction.update({where:{id: trans.id}, data:{status: "failed"}})
+
     try {
       const response = await axios.get(
-        this.flutterwaveUrl+`/transactions/${transactionId}/verify`,
+        this.flutterwaveUrl+`/transactions/${details.transaction_id}/verify`,
         {
           headers: {
             Authorization: `Bearer ${this.flutterwaveSecret}`,
@@ -71,12 +110,39 @@ export class BillingService {
         },
       );
       const resp = response?.data?.data
-      await this.prisma.transaction.updateMany({where:{refId: transactionId}, data:{status: "successful"}})
-      await this.prisma.user.updateMany({where:{email: userEmail}, data:{cardToken: resp.card?.token, lastDigit:resp.card.last_4digits }})
+      await this.prisma.transaction.update({where:{id: trans.id}, data:{status: "successful"}})
+      await this.prisma.user.update({where:{id: user.id}, data:{cardToken: resp.card?.token, lastDigit:parseInt(resp.card.last_4digits) }})
       return response.data;
     } catch (error) {
-      await this.prisma.transaction.updateMany({where:{refId: transactionId}, data:{status: "failed"}})
-      throw new HttpException(error.response.data, error.response.status);
+      console.log(error)
+      await this.prisma.transaction.update({where:{id: trans.id}, data:{status: "failed"}})
+      throw new Error(error);
+    }
+  }
+
+  async autoBill(token: string, email: string, amount: number): Promise<any> {
+    const tx_ref = `autobill_${email}_${Date.now()}`
+    const data = {
+      token,
+      currency: 'NGN',
+      country: 'NG',
+      amount,
+      email,
+      tx_ref,
+      narration: `Allwebtool points charge Billing Charge`,
+    };
+
+    try {
+      const response = await axios.post(this.flutterwaveUrl+'/tokenized-charges', data, {
+        headers: {
+          Authorization: `Bearer ${this.flutterwaveSecret}`,
+          'Content-Type': 'application/json',
+        },
+      })
+
+      return response.data;
+    } catch (error) {
+      throw new Error(`Failed to process payment: ${error.message}`);
     }
   }
 

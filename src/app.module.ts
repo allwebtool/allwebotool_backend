@@ -3,7 +3,7 @@ import { AppController } from './app.controller';
 import { ConfigModule } from '@nestjs/config';
 import { AppService } from './app.service';
 import { APP_GUARD } from '@nestjs/core';
-import { AtGuard, SubscriptionGuard } from 'common/guard';
+import { AtGuard } from 'common/guard';
 import { DigitalOceanModule } from './digitalocean/digitalocean.module';
 import { EmailModule } from './email/email.module';
 import { AuthModule } from './auth/auth.module';
@@ -16,6 +16,9 @@ import { NotificationModule } from './notification/notification.module';
 import { PaymentplanModule } from './paymentplan/paymentplan.module';
 import { UserModule } from './user/user.module';
 import { VideoModule } from './video/video.module';
+import { TtsvoicescloneModule } from './ttsvoicesclone/ttsvoicesclone.module';
+import { FaceeditorModule } from './faceeditor/faceeditor.module';
+import { ImageeditorModule } from './imageeditor/imageeditor.module';
 
 @Module({
   imports: [AppModule, 
@@ -30,16 +33,15 @@ import { VideoModule } from './video/video.module';
     PaymentplanModule,
     UserModule,
     VideoModule,
+    TtsvoicescloneModule,
+    FaceeditorModule,
+    ImageeditorModule,
   ],
   controllers: [AppController],
   providers: [AppService, 
     {
     provide: APP_GUARD,
     useClass: AtGuard
-  },
-  {
-    provide: APP_GUARD,
-    useClass: SubscriptionGuard,
   },
    PrismaService,
   ],
