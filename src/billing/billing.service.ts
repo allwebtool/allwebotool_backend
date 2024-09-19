@@ -173,7 +173,7 @@ export class BillingService {
       const remainingCredit = totalCredit - totalDebit;
       const  amountTodebit = this.valuePerPoint*points
       
-      if((remainingCredit-points) < 0) throw new BadRequestException("Insufficient points")
+      if((remainingCredit-points) < 0) return "insufficient"
       const re = await this.prisma.transaction.create({data:{
         userId: user.id,
         points,
@@ -182,7 +182,7 @@ export class BillingService {
         status: "successful"
       }})
       console.log(re)
-      return re
+      return "successful"
     }
     catch(e:any){
       console.log(e)

@@ -87,10 +87,14 @@ export class TtsvoicescloneController {
       const usr:any = req.user
       const ttsData = await this.ttsvoicescloneService.getTTS(voiceId, apiKey, userId);
       if (ttsData?.status === 'complete') {
+        const lets = await this.billingService.billAm(usr.email, Math.ceil(ttsData.output.duration*2))
+        if (lets === "insufficient"){
+           await this.prisma.voiceClone.updateMany({where:{voiceId}, data:{ status: "failed"}})
+           return {status: "failed"}
+          }
         const file = await this.ttsvoicescloneService.downloadFile(ttsData.output.url)
         const url = await this.digitalocean.uploadFile(file,userId, 'audio.mp3')
         await this.prisma.voiceClone.updateMany({where:{voiceId}, data:{resultUrl: url, status: "successful"}});
-        const lets = await this.billingService.billAm(usr.email, Math.ceil(ttsData.output.duration*2))
         console.log(lets)
         return { status: "success" }
       }
