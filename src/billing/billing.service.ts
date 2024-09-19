@@ -1,4 +1,4 @@
-import { Injectable, HttpException } from '@nestjs/common';
+import { Injectable, HttpException, BadRequestException } from '@nestjs/common';
 import axios from 'axios';
 import { randomUUID } from 'crypto';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -19,7 +19,7 @@ export class BillingService {
   constructor(private readonly prisma: PrismaService) {
     this.flutterwaveUrl = process.env.FLUTTERWAVE_URL;
     this.flutterwaveSecret = process.env.FLW_KEY;
-    this.valuePerPoint = 4
+    this.valuePerPoint = 45
   }
   
   async initializePayment(uremail:string, amount: number): Promise<any> {
@@ -146,4 +146,46 @@ export class BillingService {
     }
   }
 
+  async billAm(userId:string, points: number){
+    try{
+      console.log("was here")
+      const user = await this.prisma.user.findFirst({
+        where: { email: userId },
+        include: {
+          transactions: true, // Include the transactions related to the user
+        },
+      });
+      
+      if (!user) {
+        throw new Error('User not found');
+      }
+      
+      // Filter transactions based on type and status
+      const totalCredit = user.transactions
+        .filter(transaction => transaction.type === 'credit' && transaction.status === 'successful')
+        .reduce((acc, transaction) => acc + transaction.amount, 0);
+      
+      const totalDebit = user.transactions
+        .filter(transaction => transaction.type === 'debit' && transaction.status === 'successful')
+        .reduce((acc, transaction) => acc + transaction.amount, 0);
+      
+      // Calculate remaining credit (balance)
+      const remainingCredit = totalCredit - totalDebit;
+      const  amountTodebit = this.valuePerPoint*points
+      console.log(remainingCredit-amountTodebit)
+      if((remainingCredit-amountTodebit) < 0) throw new BadRequestException("Insufficient points")
+      const re = await this.prisma.transaction.create({data:{
+        userId: user.id,
+        points,
+        amount: amountTodebit,
+        type: "debit",
+        status: "successful"
+      }})
+      console.log(re)
+      return re
+    }
+    catch(e:any){
+      console.log(e)
+    }
+}
 }

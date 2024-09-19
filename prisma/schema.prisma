@@ -63,7 +63,7 @@ model Notification {
 model Transaction {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   userId    String   @db.ObjectId
-  refId     String
+  refId     String?
   amount    Float    
   type      Transtype
   status    Statustype

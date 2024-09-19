@@ -16,10 +16,18 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { TtsvoicescloneService } from './ttsvoicesclone.service';
 import { Request } from 'express';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { BillingService } from 'src/billing/billing.service';
+import { DigitalOceanService } from 'src/digitalocean/digitalocean.service';
 
 @Controller('voice-clone')
 export class TtsvoicescloneController {
-  constructor(private readonly ttsvoicescloneService: TtsvoicescloneService, private readonly prisma:PrismaService) {}
+  constructor(private readonly ttsvoicescloneService: TtsvoicescloneService, 
+    private readonly prisma:PrismaService,
+    private readonly billingService: BillingService,
+    private digitalocean: DigitalOceanService,
+
+
+  ) {}
 
   @Get()
   findAll(@Req() req: Request) {
@@ -74,12 +82,17 @@ export class TtsvoicescloneController {
   }
 
   @Get(':voiceId')
-  async getTTS(@Param('voiceId') voiceId: string, @Query('apiKey') apiKey: string, @Query('userId') userId: string) {
+  async getTTS(@Param('voiceId') voiceId: string, @Query('apiKey') apiKey: string, @Query('userId') userId: string, @Req() req:Request) {
     try {
+      const usr:any = req.user
       const ttsData = await this.ttsvoicescloneService.getTTS(voiceId, apiKey, userId);
       if (ttsData?.status === 'complete') {
-        await this.prisma.voiceClone.updateMany({where:{voiceId}, data:{resultUrl: ttsData.output.url, status: "successful"}});
-        return { status: "success" };
+        const file = await this.ttsvoicescloneService.downloadFile(ttsData.output.url)
+        const url = await this.digitalocean.uploadFile(file,userId, 'audio.mp3')
+        await this.prisma.voiceClone.updateMany({where:{voiceId}, data:{resultUrl: url, status: "successful"}});
+        const lets = await this.billingService.billAm(usr.email, Math.ceil(ttsData.output.duration*2))
+        console.log(lets)
+        return { status: "success" }
       }
 
       if (ttsData?.status === 'failed') {

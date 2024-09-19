@@ -2,12 +2,12 @@ import axios from 'axios';
 import { Injectable, HttpException, HttpStatus, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { DigitalOceanService } from 'src/digitalocean/digitalocean.service';
+import { BillingService } from 'src/billing/billing.service';
 
 @Injectable()
 export class TtsvoicescloneService {
   constructor(
     private prisma: PrismaService,
-    private digitalocean: DigitalOceanService,
   ) {}
 
   // Combine cloning and generating TTS process with stream handling
@@ -43,7 +43,6 @@ export class TtsvoicescloneService {
       voiceId = cloneResponse.data.id;
       // Generate TTS
       const ttsResponse = await this.generateTTS(voiceId, text, emotion, apiKey, userId, curUser, name);
-
       await axios.delete(
         'https://api.play.ht/api/v2/cloned-voices/',
         {
@@ -141,6 +140,7 @@ export class TtsvoicescloneService {
 
     try {
       const response = await axios.request(options);
+      
       return response.data;
     } catch (error) {
       console.error(error);

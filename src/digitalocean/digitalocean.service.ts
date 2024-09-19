@@ -49,14 +49,15 @@ export class DigitalOceanService {
     });
   }
 
-  async validateFileDuration(url: string): Promise<void> {
+  async validateFileDuration(url: string): Promise<number> {
     console.log(url);
     const duration = await this.getFileDuration(url);
     console.log(duration);
-
+    
     if (duration > 30) {
       throw new BadRequestException('File exceeds 30 seconds');
     }
+    return duration
   }
 
   async generateThumbnail(videoUrl: string, folder: string, slug: string): Promise<string> {

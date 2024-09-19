@@ -4,11 +4,12 @@ import { NotificationModule } from 'src/notification/notification.module';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { DigitalOceanController } from './digitalocean.controller';
 import { DigitalOceanService } from './digitalocean.service';
+import { BillingService } from 'src/billing/billing.service';
 
 @Module({
   imports: [forwardRef(() => NotificationModule)],
   controllers: [DigitalOceanController],
-  providers: [ PrismaService, DigitalOceanService],
+  providers: [ PrismaService, DigitalOceanService,BillingService],
   exports: [],
 })
 export class DigitalOceanModule {}

@@ -1,20 +1,22 @@
-import { Controller, Post, UseInterceptors, UploadedFiles, Req, BadRequestException, Get, Param, Delete } from '@nestjs/common';
+import { Controller, Post, UseInterceptors, UploadedFiles, Req, BadRequestException, Get, Param, Delete, Body } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { DigitalOceanService } from './digitalocean.service';
 import { Request } from 'express';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { generateSlug } from 'common/util/slugify';
+import { BillingService } from 'src/billing/billing.service';
 
 @Controller()
 export class DigitalOceanController {
   constructor(
     private readonly digitalOceanService: DigitalOceanService,
-    private readonly prisma: PrismaService
+    private readonly prisma: PrismaService,
+    private readonly billingService: BillingService
   ) {}
 
   @Post('upload')
   @UseInterceptors(FilesInterceptor('files', 2))
-  async upload(@UploadedFiles() files: Express.Multer.File[], @Req() req: Request) {
+  async upload(@UploadedFiles() files: Express.Multer.File[], @Req() req: Request, @Body('apiKey') apiKey: string) {
 
     try{
     if (!files || files.length !== 2) {
@@ -29,15 +31,16 @@ export class DigitalOceanController {
 
     const user = await this.getUserFromRequest(req);
 
-    const { videoUrl, audioUrl } = await this.uploadFilesToDigitalOcean(user.username, videoFile, audioFile);
+    const { videoUrl, audioUrl, videoln } = await this.uploadFilesToDigitalOcean(user.username, videoFile, audioFile);
     const uniqueSuffix = `${Date.now()}`;
   const thumbnailFileName = `${generateSlug(user.username)}-${uniqueSuffix}-thumbnail.jpg`;
 
   // Generate thumbnail from the video file
   const thumbnail = await this.digitalOceanService.generateThumbnail(videoUrl, 'thumbnails', thumbnailFileName);
 
+  await this.billingService.billAm(user.email, Math.ceil(videoln*2))
     // Newport AI API call
-    const taskId = await this.processVideoWithNewportAI(videoUrl, audioUrl);
+    const taskId = await this.processVideoWithNewportAI(videoUrl, audioUrl, apiKey);
 
     // Save file metadata to the database
     const video = await this.prisma.video.create({
@@ -81,16 +84,16 @@ export class DigitalOceanController {
     const audioUrl = await this.digitalOceanService.uploadFile(audioFile.buffer, audioSlug, this.sanitizeFilename(audioFile.originalname));
 
     // Validate durations
-    await this.digitalOceanService.validateFileDuration(videoUrl);
+    const videoln = await this.digitalOceanService.validateFileDuration(videoUrl);
     await this.digitalOceanService.validateFileDuration(audioUrl);
 
-    return { videoUrl, audioUrl };
+    return { videoUrl, audioUrl, videoln };
   }
 
-  private async processVideoWithNewportAI(videoUrl: string, audioUrl: string): Promise<string> {
+  private async processVideoWithNewportAI(videoUrl: string, audioUrl: string, apiKey:string): Promise<string> {
     const myHeaders = new Headers({
       "Content-Type": "application/json",
-      "Authorization": "Bearer 86271a98facf446d8922569799589b26"
+      "Authorization": `Bearer ${apiKey}`
     });
 
     const raw = JSON.stringify({
@@ -113,7 +116,7 @@ export class DigitalOceanController {
     try {
       const response = await fetch("https://api.newportai.com/api/async/talking_face", requestOptions);
       const result = await response.json();
-
+      console.log(result)
       if (!result?.data?.taskId) {
         throw new Error('Failed to retrieve taskId from Newport AI');
       }
@@ -126,10 +129,10 @@ export class DigitalOceanController {
   }
 
   @Get('upload/:taskId')
-  async pollForResult(@Param('taskId') taskId: string) {
+  async pollForResult(@Param('taskId') taskId: string, @Body('apiKey') apiKey: string) {
     const myHeaders = new Headers({
       "Content-Type": "application/json",
-      "Authorization": "Bearer 86271a98facf446d8922569799589b26"
+      "Authorization": `Bearer ${apiKey}`
     });
 
     try {
