@@ -163,17 +163,17 @@ export class BillingService {
       // Filter transactions based on type and status
       const totalCredit = user.transactions
         .filter(transaction => transaction.type === 'credit' && transaction.status === 'successful')
-        .reduce((acc, transaction) => acc + transaction.amount, 0);
+        .reduce((acc, transaction) => acc + transaction.points, 0);
       
       const totalDebit = user.transactions
         .filter(transaction => transaction.type === 'debit' && transaction.status === 'successful')
-        .reduce((acc, transaction) => acc + transaction.amount, 0);
+        .reduce((acc, transaction) => acc + transaction.points, 0);
       
       // Calculate remaining credit (balance)
       const remainingCredit = totalCredit - totalDebit;
       const  amountTodebit = this.valuePerPoint*points
-      console.log(remainingCredit-amountTodebit)
-      if((remainingCredit-amountTodebit) < 0) throw new BadRequestException("Insufficient points")
+      
+      if((remainingCredit-points) < 0) throw new BadRequestException("Insufficient points")
       const re = await this.prisma.transaction.create({data:{
         userId: user.id,
         points,

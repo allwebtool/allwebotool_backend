@@ -1,4 +1,4 @@
-import { Controller, Post, UseInterceptors, UploadedFiles, Req, BadRequestException, Get, Param, Delete, Body } from '@nestjs/common';
+import { Controller, Post, UseInterceptors, UploadedFiles, Req, BadRequestException, Get, Param, Delete, Body, Query } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { DigitalOceanService } from './digitalocean.service';
 import { Request } from 'express';
@@ -129,12 +129,12 @@ export class DigitalOceanController {
   }
 
   @Get('upload/:taskId')
-  async pollForResult(@Param('taskId') taskId: string, @Body('apiKey') apiKey: string) {
+  async pollForResult(@Param('taskId') taskId: string, @Query('apiKey') apiKey: string) {
     const myHeaders = new Headers({
       "Content-Type": "application/json",
       "Authorization": `Bearer ${apiKey}`
     });
-
+    console.log(apiKey)
     try {
       const result = await this.fetchAsyncResult(taskId, myHeaders);
 

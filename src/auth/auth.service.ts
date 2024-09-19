@@ -60,6 +60,15 @@ export class AuthService {
           },
       });
       // Send OTP email
+      await this.prisma.transaction.create({
+        data:{
+          userId: newUser.id,
+          amount: 0,
+          points: 50,
+          type: 'credit',
+          status: "successful"
+        }
+      })
       await this.mailService.sendOTP(newUser, token);
 
       return { email: newUser.email }

@@ -36,11 +36,11 @@ export class UserService {
     // Filter transactions based on type and status
     const totalCredit = user.transactions
       .filter(transaction => transaction.type === 'credit' && transaction.status === 'successful')
-      .reduce((acc, transaction) => acc + transaction.amount, 0);
+      .reduce((acc, transaction) => acc + transaction.points, 0);
     
     const totalDebit = user.transactions
       .filter(transaction => transaction.type === 'debit' && transaction.status === 'successful')
-      .reduce((acc, transaction) => acc + transaction.amount, 0);
+      .reduce((acc, transaction) => acc + transaction.points, 0);
     
     // Calculate remaining credit (balance)
     const remainingCredit = totalCredit - totalDebit;
@@ -50,9 +50,9 @@ export class UserService {
     
     return {
       ...userWithoutCardToken,
-      totalCredit,
-      totalDebit,
-      remainingCredit,
+      totalCredit: Math.floor(totalCredit),
+      totalDebit: Math.floor(totalCredit),
+      remainingCredit: Math.floor(remainingCredit),
     };
   }
 
