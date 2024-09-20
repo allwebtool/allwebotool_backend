@@ -18,6 +18,7 @@ import { Request } from 'express';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { BillingService } from 'src/billing/billing.service';
 import { DigitalOceanService } from 'src/digitalocean/digitalocean.service';
+import { randomUUID } from 'crypto';
 
 @Controller('voice-clone')
 export class TtsvoicescloneController {
@@ -93,7 +94,7 @@ export class TtsvoicescloneController {
            return {status: "failed"}
           }
         const file = await this.ttsvoicescloneService.downloadFile(ttsData.output.url)
-        const url = await this.digitalocean.uploadFile(file,userId, 'audio.mp3')
+        const url = await this.digitalocean.uploadFile(file,userId, randomUUID()+'-audio.mp3')
         await this.prisma.voiceClone.updateMany({where:{voiceId}, data:{resultUrl: url, status: "successful"}});
         console.log(lets)
         return { status: "success" }
