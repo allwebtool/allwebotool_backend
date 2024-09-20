@@ -94,8 +94,8 @@ export class TtsvoicescloneController {
            return {status: "failed"}
           }
         const file = await this.ttsvoicescloneService.downloadFile(ttsData.output.url)
-        const url = await this.digitalocean.uploadFile(file,userId, randomUUID()+'-audio.mp3')
-        await this.prisma.voiceClone.updateMany({where:{voiceId}, data:{resultUrl: url, status: "successful"}});
+        const url = await this.digitalocean.uploadFile(file,randomUUID(), randomUUID()+'-audio.mp3')
+        await this.prisma.voiceClone.updateMany({where:{voiceId}, data:{resultUrl: ttsData.output.url, status: "successful"}});
         console.log(lets)
         return { status: "success" }
       }
