@@ -90,12 +90,12 @@ export class TtsvoicescloneController {
       if (ttsData?.status === 'complete') {
         const lets = await this.billingService.billAm(usr.email, Math.ceil(ttsData.output.duration*2))
         if (lets === "insufficient"){
-           await this.prisma.voiceClone.updateMany({where:{voiceId}, data:{ status: "failed"}})
+           await this.prisma.voiceClone.update({where:{voiceId}, data:{ status: "failed"}})
            return {status: "failed"}
           }
         const file = await this.ttsvoicescloneService.downloadFile(ttsData.output.url)
-        const url = await this.digitalocean.uploadFile(file,randomUUID(), randomUUID()+'-audio.mp3')
-        await this.prisma.voiceClone.updateMany({where:{voiceId}, data:{resultUrl: ttsData.output.url, status: "successful"}});
+        const url = await this.digitalocean.uploadFile(file,userId, randomUUID()+'-audio.mp3')
+        await this.prisma.voiceClone.update({where:{voiceId}, data:{resultUrl: url, status: "successful"}});
         console.log(lets)
         return { status: "success" }
       }
@@ -113,7 +113,5 @@ export class TtsvoicescloneController {
       );
     }
   }
-
-  
  
 }
