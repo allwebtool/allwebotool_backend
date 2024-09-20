@@ -50,7 +50,7 @@ export class BillingService {
           tx_ref,
           amount: amount,
           currency: 'NGN',
-          redirect_url: `http://localhost:3000/billing/verify`,
+          redirect_url: `https://allwebtool.com/billing/verify`,
           payment_options: 'card',
           customer: {
             email: user.email,
