@@ -88,7 +88,7 @@ export class TtsvoicescloneController {
       const usr:any = req.user
       const ttsData = await this.ttsvoicescloneService.getTTS(voiceId, apiKey, userId);
       if (ttsData?.status === 'complete') {
-        const lets = await this.billingService.billAm(usr.email, Math.ceil(ttsData.output.duration*2))
+        const lets = await this.billingService.billAm(usr.email, Math.ceil(ttsData.output.duration*0.5))
         if (lets === "insufficient"){
            await this.prisma.voiceClone.update({where:{voiceId}, data:{ status: "failed"}})
            return {status: "failed"}
