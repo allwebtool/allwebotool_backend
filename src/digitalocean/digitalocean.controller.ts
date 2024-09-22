@@ -38,7 +38,7 @@ export class DigitalOceanController {
   // Generate thumbnail from the video file
   const thumbnail = await this.digitalOceanService.generateThumbnail(videoUrl, 'thumbnails', thumbnailFileName);
 
-  await this.billingService.billAm(user.email, Math.ceil(videoln*0.5))
+  await this.billingService.billAm(user.email, Math.floor(videoln*0.5))
     // Newport AI API call
     const taskId = await this.processVideoWithNewportAI(videoUrl, audioUrl, apiKey);
 
