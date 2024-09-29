@@ -46,9 +46,9 @@ export class AuthService {
         if (existingUsernameUser) {
             throw new BadRequestException('Username already exists');
         }
-    
+        
         // Perform VPN and Device Fingerprint Checks
-        const userIp = request.ip; // Use Express.js to get the IP address
+        const userIp = request.ip;
         const userAgent = request.headers['user-agent'];
     
         // Check if the IP address belongs to a VPN (Using a VPN detection API)
@@ -111,6 +111,7 @@ export class AuthService {
     async checkIfUsingVPN(ip: string): Promise<boolean> {
       try {
           const response = await axios.get(`https://vpnapi.io/api/${ip}?key=your_api_key`);
+          console.log(response)
           return response.data.security.vpn; // Assuming the response returns a `vpn` field
       } catch (error) {
           console.error('Failed to check VPN status:', error);
@@ -169,7 +170,7 @@ export class AuthService {
           })
         }
       }
-
+      
     async logout(userId: string, req: Request, res: Response){
       const rt2bd = req.cookies["refresh_token"]
       
