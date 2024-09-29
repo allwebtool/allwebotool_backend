@@ -22,6 +22,9 @@ model User {
   status         String         @default("active")
   email_verified Boolean        @default(false)
   cardToken String?
+  ip_address String?
+  user_agent String?
+  deviceFingerprint String?
   lastDigit Int?
 
   videos         Video[]

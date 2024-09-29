@@ -1,8 +1,6 @@
 import axios from 'axios';
 import { Injectable, HttpException, HttpStatus, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { DigitalOceanService } from 'src/digitalocean/digitalocean.service';
-import { BillingService } from 'src/billing/billing.service';
 
 @Injectable()
 export class TtsvoicescloneService {

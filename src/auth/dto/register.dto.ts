@@ -1,3 +1,4 @@
+import { Optional } from "@nestjs/common";
 import { IsEmail, IsNotEmpty, IsString } from "class-validator";
 
 export class RegisterDto {
@@ -18,4 +19,7 @@ export class RegisterDto {
     @IsNotEmpty()
     @IsString()
     username: string;
+
+    @Optional()
+    deviceFingerprint: string
 }

@@ -18,8 +18,8 @@ export class AuthController {
     @PublicRoute()
     @Post("register")
         @HttpCode(HttpStatus.CREATED)
-        signUpLocal(@Body() dto:RegisterDto):Promise<SignUpResponse>{
-            return this.authService.signUpLocal(dto)
+        signUpLocal(@Body() dto:RegisterDto, @Req() req:Request):Promise<SignUpResponse>{
+            return this.authService.signUpLocal(dto, req)
         }
 
     @Post("logout")

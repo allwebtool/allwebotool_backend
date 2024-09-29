@@ -10,6 +10,7 @@ import { EmailService } from 'src/email/email.service';
 import { verifyOtpDTO } from './dto/verifyotp.dto';
 import { ResetPasswordDto } from './dto/resetPassword.dto';
 import { RequestResetDto } from './dto/requestReset.dto';
+import axios from 'axios';
 
 @Injectable()
 export class AuthService {
@@ -19,68 +20,112 @@ export class AuthService {
       private readonly mailService: EmailService
       ){}
 
-    async signUpLocal(dto: RegisterDto): Promise<SignUpResponse> {
+      async signUpLocal(dto: RegisterDto, request: any): Promise<SignUpResponse> {
+        
+        // Convert username to lowercase
+        const lowerCaseUsername = dto.username.toLowerCase();
     
-      // Check if email already exists
-      const existingEmailUser = await this.prisma.user.findUnique({
-          where: {
-              email: dto.email,
-          },
-      });
-
-      if (existingEmailUser) {
-          throw new BadRequestException('Email already exists');
-      }
-
-      // Check if username already exists
-      const existingUsernameUser = await this.prisma.user.findUnique({
-          where: {
-              username: dto.username,
-          },
-      });
-
-      if (existingUsernameUser) {
-          throw new BadRequestException('Username already exists');
-      }
-
-      // Hash the password
-      const hash = await this.hashData(dto.password);
-       // Generate OTP token and hash
-       const token = Math.floor(1000 + Math.random() * 9000).toString();
-
-      // Create the new user
-      const newUser = await this.prisma.user.create({
-          data: {
-              email: dto.email,
-              role: dto.role,
-              username: dto.username,
-              hash: hash,
-              otp_token: token,
-              from_where: dto.from_where
-          },
-      });
-      // Send OTP email
-      await this.prisma.transaction.create({
-        data:{
-          userId: newUser.id,
-          amount: 0,
-          points: 50,
-          type: 'credit',
-          status: "successful"
+        // Check if email already exists
+        const existingEmailUser = await this.prisma.user.findUnique({
+            where: {
+                email: dto.email,
+            },
+        });
+    
+        if (existingEmailUser) {
+            throw new BadRequestException('Email already exists');
         }
-      })
-      await this.mailService.sendOTP(newUser, token);
-
-      return { email: newUser.email }
-}
+    
+        // Check if username already exists (after converting to lowercase)
+        const existingUsernameUser = await this.prisma.user.findUnique({
+            where: {
+                username: lowerCaseUsername,
+            },
+        });
+    
+        if (existingUsernameUser) {
+            throw new BadRequestException('Username already exists');
+        }
+    
+        // Perform VPN and Device Fingerprint Checks
+        const userIp = request.ip; // Use Express.js to get the IP address
+        const userAgent = request.headers['user-agent'];
+    
+        // Check if the IP address belongs to a VPN (Using a VPN detection API)
+        const vpnStatus = await this.checkIfUsingVPN(userIp);
+        if (vpnStatus) {
+            throw new BadRequestException('VPN usage detected. Registration is not allowed through VPNs.');
+        }
+    
+        // Check device fingerprinting
+        const deviceFingerprint = dto.deviceFingerprint; // Obtain this from the frontend (e.g., FingerprintJS or ClientJS)
+        console.log(deviceFingerprint, userIp, userAgent)
+        const existingDeviceUser = await this.prisma.user.findFirst({
+            where: {
+                deviceFingerprint: deviceFingerprint,
+            },
+        });
+    
+        if (existingDeviceUser) {
+            throw new BadRequestException('This device has already been used to create an account.');
+        }
+    
+        // Hash the password
+        const hash = await this.hashData(dto.password);
+    
+        // Generate OTP token and hash
+        const token = Math.floor(1000 + Math.random() * 9000).toString();
+    
+        // Create the new user with device fingerprinting and IP address logging
+        const newUser = await this.prisma.user.create({
+            data: {
+                email: dto.email.toLowerCase(),
+                role: dto.role,
+                username: lowerCaseUsername,
+                hash: hash,
+                otp_token: token,
+                from_where: dto.from_where,
+                ip_address: userIp,
+                user_agent: userAgent,
+                deviceFingerprint: deviceFingerprint, // Save device fingerprint
+            },
+        });
+    
+        // Credit initial points to the user’s account
+        await this.prisma.transaction.create({
+            data: {
+                userId: newUser.id,
+                amount: 0,
+                points: 50,
+                type: 'credit',
+                status: 'successful',
+            },
+        });
+    
+        // Send OTP email
+        await this.mailService.sendOTP(newUser, token);
+    
+        return { email: newUser.email };
+    }
+    
+    async checkIfUsingVPN(ip: string): Promise<boolean> {
+      try {
+          const response = await axios.get(`https://vpnapi.io/api/${ip}?key=your_api_key`);
+          return response.data.security.vpn; // Assuming the response returns a `vpn` field
+      } catch (error) {
+          console.error('Failed to check VPN status:', error);
+          return false; // If VPN check fails, allow registration by default
+      }
+  }
+  
 
     async signInLocal(dto: AuthDto, res: Response){
         try {
           const user = await this.prisma.user.findFirst({
             where: {
               OR: [
-                { username: dto.user },
-                { email: dto.user }
+                { username: dto.user.toLowerCase() },
+                { email: dto.user.toLowerCase() }
               ]
             }
           });
