@@ -231,7 +231,7 @@ export class AuthService {
         });
       } catch (error) {
         console.log(error)
-        throw new UnauthorizedException('Token refresh failed');
+        throw new UnauthorizedException('You\'re not logged in.');
       }
     }
  
