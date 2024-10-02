@@ -347,7 +347,7 @@ export class AuthService {
   async resetPassword(dto: ResetPasswordDto): Promise<{ message: string }> {
     const decodedToken = await this.jwtService.verifyAsync(dto.token, {
       secret: process.env.RESET_PASSWORD_SECRET,
-    });
+    })
 
     const user = await this.prisma.user.findUnique({
       where: { id: decodedToken.sub },

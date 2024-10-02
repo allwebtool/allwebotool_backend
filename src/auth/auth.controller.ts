@@ -1,10 +1,12 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req, Res} from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, HttpCode, HttpStatus, Post, Req, Res, UnauthorizedException} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthDto } from './dto/auth.dto';
 import { SignUpResponse } from 'types';
 import { RegisterDto } from './dto/register.dto';
 import { Request, Response } from 'express';
 import { PublicRoute } from 'common/decorator/public.decorator';
+import { ResetPasswordDto } from './dto/resetPassword.dto';
+import { RequestResetDto } from './dto/requestReset.dto';
 
 @Controller()
 export class AuthController {
@@ -44,5 +46,32 @@ export class AuthController {
     @Post("verify_otp")
         verifyOtp(@Body() dto:any): Promise<{message:string}>{
             return this.authService.verifyOTP(dto)
+        }
+
+    @PublicRoute()
+    @Post('request-reset-password')
+        async requestPasswordReset(
+          @Body() dto: RequestResetDto,
+        ): Promise<{ message: string }> {
+          try {
+            return await this.authService.requestPasswordReset(dto);
+          } catch (error) {
+            throw new BadRequestException(error.message || 'Error in processing');
+          }
+        }
+      
+    @PublicRoute()
+    @Post('reset-password')
+        async resetPassword(
+          @Body() dto: ResetPasswordDto,
+        ): Promise<{ message: string }> {
+          try {
+            return await this.authService.resetPassword(dto);
+          } catch (error) {
+            if (error instanceof UnauthorizedException) {
+              throw new UnauthorizedException(error.message || 'Invalid token');
+            }
+            throw new BadRequestException(error.message || 'Error in processing');
+          }
         }
 }
