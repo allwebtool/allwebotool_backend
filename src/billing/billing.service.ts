@@ -91,7 +91,6 @@ export class BillingService {
       
     const user = await this.prisma.user.findFirst({where:{email: details.email}})
     const trans = await this.prisma.transaction.findFirst({where:{userId: user.id, refId:details.tx_ref, status: "initiated"}})
-    console.log(user,trans)
     if(!trans) return {message: "no longer active"}
     if(details.status !== "successful") return await this.prisma.transaction.update({where:{id: trans.id}, data:{status: "failed"}})
 
@@ -106,7 +105,10 @@ export class BillingService {
         },
       );
       const resp = response?.data?.data
-      await this.prisma.transaction.update({where:{id: trans.id}, data:{status: "successful"}})
+      console.log(resp.data)
+
+      const newt= await this.prisma.transaction.update({where:{id: trans.id}, data:{status: "successful"}})
+      console.log("newt", newt)
       await this.prisma.user.update({where:{id: user.id}, data:{cardToken: resp.card?.token, lastDigit:parseInt(resp.card.last_4digits) }})
       return response.data;
     } catch (error) {
