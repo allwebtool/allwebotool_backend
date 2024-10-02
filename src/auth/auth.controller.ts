@@ -64,9 +64,25 @@ export class AuthController {
     @Post('reset-password')
         async resetPassword(
           @Body() dto: ResetPasswordDto,
+          @Req() req: Request
         ): Promise<{ message: string }> {
           try {
             return await this.authService.resetPassword(dto);
+          } catch (error) {
+            if (error instanceof UnauthorizedException) {
+              throw new UnauthorizedException(error.message || 'Invalid token');
+            }
+            throw new BadRequestException(error.message || 'Error in processing');
+          }
+        }
+
+    @Post('private-reset-password')
+        async privReset(
+          @Body() dto: ResetPasswordDto,
+          @Req() req: Request
+        ): Promise<{ message: string }> {
+          try {
+            return await this.authService.resetPassword(dto, req);
           } catch (error) {
             if (error instanceof UnauthorizedException) {
               throw new UnauthorizedException(error.message || 'Invalid token');

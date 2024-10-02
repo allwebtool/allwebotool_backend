@@ -344,14 +344,24 @@ export class AuthService {
     return { message: 'Password reset link sent to your email' };
   }
 
-  async resetPassword(dto: ResetPasswordDto): Promise<{ message: string }> {
-    const decodedToken = await this.jwtService.verifyAsync(dto.token, {
-      secret: process.env.RESET_PASSWORD_SECRET,
-    })
-
-    const user = await this.prisma.user.findUnique({
-      where: { id: decodedToken.sub },
+  async resetPassword(dto: ResetPasswordDto, req?: Request): Promise<{ message: string }> {
+    
+    const usr:any = req.user
+    console.log(usr)
+    let user: any = {}
+    if(usr.email){
+     user = await this.prisma.user.findFirst({
+      where: { email: usr.email },
     });
+    }else{
+      const decodedToken = await this.jwtService.verifyAsync(dto.token, {
+        secret: process.env.RESET_PASSWORD_SECRET,
+      })
+      user = await this.prisma.user.findUnique({
+        where: { id: decodedToken.sub },
+      });
+    }
+     
 
     if (!user) {
       throw new UnauthorizedException('Invalid token');
