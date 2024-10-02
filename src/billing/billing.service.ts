@@ -93,7 +93,8 @@ export class BillingService {
     const trans = await this.prisma.transaction.findFirst({where:{userId: user.id, refId:details.tx_ref, status: "initiated"}})
     if(!trans) return {message: "no longer active"}
     if(details.status !== "successful") return await this.prisma.transaction.update({where:{id: trans.id}, data:{status: "failed"}})
-
+      const newt= await this.prisma.transaction.update({where:{id: trans.id}, data:{status: "successful"}})
+      console.log("newt", newt)
     try {
       const response = await axios.get(
         this.flutterwaveUrl+`/transactions/${details.transaction_id}/verify`,
@@ -107,8 +108,7 @@ export class BillingService {
       const resp = response?.data?.data
       console.log(resp.data)
 
-      const newt= await this.prisma.transaction.update({where:{id: trans.id}, data:{status: "successful"}})
-      console.log("newt", newt)
+      
       await this.prisma.user.update({where:{id: user.id}, data:{cardToken: resp.card?.token, lastDigit:parseInt(resp.card.last_4digits) }})
       return response.data;
     } catch (error) {
