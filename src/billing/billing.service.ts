@@ -51,7 +51,7 @@ export class BillingService {
           amount: amount,
           currency: 'NGN',
           redirect_url: `https://allwebtool.com/billing/verify`,
-          payment_options: 'card',
+          // payment_options: 'card',
           customer: {
             email: user.email,
             name: user.username
@@ -60,10 +60,6 @@ export class BillingService {
             title: 'Allwebtool Points Purchase',
             description: 'Purchase points to use on Allwebtool platform',
             logo: 'https://cdn.allwebtool.com/allwebtool_assets/logo.png',
-          },
-          meta: {
-            payment_option: "card",
-            color: "#00B4D8"
           },
         },
         {
