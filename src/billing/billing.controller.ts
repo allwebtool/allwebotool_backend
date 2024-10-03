@@ -22,7 +22,7 @@ export class BillingController {
   ) {
     console.log(amount, req.user)
     const user:any = req.user
-    return this.billingService.initializePayment(user.email as string, amount);
+    return await this.billingService.initializePayment(user.email as string, amount);
   }
 
   // Endpoint to verify a payment
@@ -41,7 +41,7 @@ export class BillingController {
       status
     }
 
-    return this.billingService.verifyPayment(verifyPaymentData);
+    return await this.billingService.verifyPayment(verifyPaymentData);
   }
 
   // Auto-bill endpoint to charge a saved card token
@@ -51,7 +51,7 @@ export class BillingController {
     @Req() req: Request,
     @Body('amount') amount: number,
   ) {
-    return this.billingService.autoBill(token, req.user as string, amount);
+    return await this.billingService.autoBill(token, req.user as string, amount);
   }
 
   @Post('givepoint')
@@ -59,6 +59,6 @@ export class BillingController {
     @Body('userId') userId: string,
     @Body('points') points: number,
   ) {
-    return this.billingService.givePoint(userId, points);
+    return await this.billingService.givePoint(userId, points);
   }
 }

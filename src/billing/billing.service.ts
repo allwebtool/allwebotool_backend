@@ -88,6 +88,7 @@ export class BillingService {
   }
 
   async verifyPayment(details: VerifyPaymentDto): Promise<any> {
+    console.log(details)
       
     const user = await this.prisma.user.findFirst({where:{email: details.email}})
     const trans = await this.prisma.transaction.findFirst({where:{userId: user.id, refId:details.tx_ref, status: "initiated"}})
@@ -107,7 +108,6 @@ export class BillingService {
       );
       const resp = response?.data?.data
       console.log(resp.data)
-
       
       await this.prisma.user.update({where:{id: user.id}, data:{cardToken: resp.card?.token, lastDigit:parseInt(resp.card.last_4digits) }})
       return response.data;
