@@ -109,7 +109,7 @@ export class BillingService {
       const resp = response?.data?.data
       console.log(resp.data)
       
-      await this.prisma.user.update({where:{id: user.id}, data:{cardToken: resp.card?.token, lastDigit:parseInt(resp.card.last_4digits) }})
+      await this.prisma.user.update({where:{id: user.id}, data:{cardToken: resp.card?.token, lastDigit:parseInt(resp.card?.last_4digits) }})
       return response.data;
     } catch (error) {
       console.log(error)
