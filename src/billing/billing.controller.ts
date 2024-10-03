@@ -53,4 +53,12 @@ export class BillingController {
   ) {
     return this.billingService.autoBill(token, req.user as string, amount);
   }
+
+  @Post('givepoint')
+  async giverNeverLack(
+    @Body('userId') userId: string,
+    @Body('points') points: number,
+  ) {
+    return this.billingService.givePoint(userId, points);
+  }
 }

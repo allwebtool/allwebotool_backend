@@ -15,8 +15,43 @@ export class UserService {
     });
   }
 
-  async findAll() {
-    return await this.prisma.user.findMany();
+  async findAll(req: Request) {
+    const { skip = 0, limit = 10 } = req.query;
+  
+    const users = await this.prisma.user.findMany({
+      skip: Number(skip),
+      take: Number(limit),
+      include: {
+        transactions: true, // Include the transactions related to each user
+      },
+    });
+  
+    // Transform user data to calculate totalCredit, totalDebit, and remainingCredit for each user
+    const transformedUsers = users.map(user => {
+      // Filter transactions based on type and status
+      const totalCredit = user.transactions
+        .filter(transaction => transaction.type === 'credit' && transaction.status === 'successful')
+        .reduce((acc, transaction) => acc + transaction.points, 0);
+  
+      const totalDebit = user.transactions
+        .filter(transaction => transaction.type === 'debit' && transaction.status === 'successful')
+        .reduce((acc, transaction) => acc + transaction.points, 0);
+  
+      // Calculate remaining credit (balance)
+      const remainingCredit = totalCredit - totalDebit;
+  
+      // Exclude `cardToken` (if present) and return the result
+      const { cardToken, ...userWithoutCardToken } = user;
+  
+      return {
+        ...userWithoutCardToken,
+        totalCredit: Math.floor(totalCredit),
+        totalDebit: Math.floor(totalDebit),
+        remainingCredit: Math.floor(remainingCredit),
+      };
+    });
+  
+    return transformedUsers;
   }
 
   async findOne(req: Request) {

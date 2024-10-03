@@ -185,5 +185,21 @@ export class BillingService {
     catch(e:any){
       console.log(e)
     }
-}
+  }
+
+  async givePoint(userId:string, points:number){
+    try{
+      await this.prisma.transaction.create({data:{
+        userId,
+        points,
+        amount: 0,
+        type:"credit",
+        status:"successful"
+      }})
+
+      return {message:"points added successfully"}
+    }catch(e){
+      throw new Error(`Failed to give points: ${e.message}`);
+    }
+  }
 }
