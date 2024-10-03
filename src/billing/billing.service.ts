@@ -87,13 +87,13 @@ export class BillingService {
     }
   }
 
-  async verifyPayment(details: VerifyPaymentDto): Promise<any> {
+  async verifyPayment(details: VerifyPaymentDto) {
     console.log(details)
       
     const user = await this.prisma.user.findFirst({where:{email: details.email}})
     const trans = await this.prisma.transaction.findFirst({where:{userId: user.id, refId:details.tx_ref, status: "initiated"}})
     if(!trans) return {message: "no longer active"}
-    if(details.status !== "successful") return await this.prisma.transaction.update({where:{id: trans.id}, data:{status: "failed"}})
+    if(details.status != "successful") {return await this.prisma.transaction.update({where:{id: trans.id}, data:{status: "failed"}})}
       const newt= await this.prisma.transaction.update({where:{id: trans.id}, data:{status: "successful"}})
       console.log("newt", newt)
     try {
@@ -112,9 +112,8 @@ export class BillingService {
       await this.prisma.user.update({where:{id: user.id}, data:{cardToken: resp.card?.token, lastDigit:parseInt(resp.card?.last_4digits) }})
       return response.data;
     } catch (error) {
-      console.log(error)
-      await this.prisma.transaction.update({where:{id: trans.id}, data:{status: "failed"}})
-      throw new Error(error);
+      console.log("here",error)
+      throw new BadRequestException(error);
     }
   }
 

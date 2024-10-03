@@ -22,12 +22,12 @@ export class BillingController {
   ) {
     console.log(amount, req.user)
     const user:any = req.user
-    return await this.billingService.initializePayment(user.email as string, amount);
+    return this.billingService.initializePayment(user.email as string, amount);
   }
 
   // Endpoint to verify a payment
   @Post('verify')
-  async verifyPayment(
+  async verifyPayment(  
     @Body('transaction_id') transaction_id: string,
     @Body('tx_ref') tx_ref: string,
     @Body('status') status: string,
@@ -36,12 +36,12 @@ export class BillingController {
     const user:any = req.user
     const verifyPaymentData:VerifyPaymentDto ={
       email: user.email,
-      tx_ref, 
+      tx_ref,
       transaction_id,
       status
     }
 
-    return await this.billingService.verifyPayment(verifyPaymentData);
+    return this.billingService.verifyPayment(verifyPaymentData);
   }
 
   // Auto-bill endpoint to charge a saved card token
@@ -51,7 +51,7 @@ export class BillingController {
     @Req() req: Request,
     @Body('amount') amount: number,
   ) {
-    return await this.billingService.autoBill(token, req.user as string, amount);
+    return this.billingService.autoBill(token, req.user as string, amount);
   }
 
   @Post('givepoint')
@@ -59,6 +59,6 @@ export class BillingController {
     @Body('userId') userId: string,
     @Body('points') points: number,
   ) {
-    return await this.billingService.givePoint(userId, points);
+    return this.billingService.givePoint(userId, points);
   }
 }
