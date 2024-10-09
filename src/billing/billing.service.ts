@@ -43,7 +43,7 @@ export class BillingService {
         return {url: "/billing/verify?autobill=true"}
       }
       const tx_ref =  `allwebtool-${randomUUID()+Date.now()}`
-
+      console.log(tx_ref)
       const response = await axios.post(
         this.flutterwaveUrl+'/payments',
         {

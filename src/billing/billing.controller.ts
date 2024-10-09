@@ -20,7 +20,6 @@ export class BillingController {
     @Req() req:Request,
     @Body('amount') amount: number,
   ) {
-    console.log(amount, req.user)
     const user:any = req.user
     return this.billingService.initializePayment(user.email as string, amount);
   }
