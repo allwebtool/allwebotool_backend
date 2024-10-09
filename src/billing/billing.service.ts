@@ -82,7 +82,7 @@ export class BillingService {
         return {url: response.data.data.link}
         
     } catch (error) {
-      console.log(error)
+      console.log(error?.response?.data, "hmm", error?.response?.data?.errors)
       throw new HttpException(error.response.data, error.response.status);
     }
   }
