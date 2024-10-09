@@ -19,7 +19,7 @@ export class BillingService {
   constructor(private readonly prisma: PrismaService) {
     this.flutterwaveUrl = process.env.FLUTTERWAVE_URL;
     this.flutterwaveSecret = process.env.FLW_KEY;
-    this.valuePerPoint = 45
+    this.valuePerPoint = 0.025
   }
   
   async initializePayment(uremail:string, amount: number): Promise<any> {
@@ -49,9 +49,9 @@ export class BillingService {
         {
           tx_ref,
           amount: amount,
-          currency: 'NGN',
+          currency: 'USD',
           redirect_url: `https://allwebtool.com/billing/verify`,
-          // payment_options: 'card',
+          payment_options: ['card', 'google pay', 'apple pay'],
           customer: {
             email: user.email,
             name: user.username
@@ -89,7 +89,6 @@ export class BillingService {
 
   async verifyPayment(details: VerifyPaymentDto) {
     console.log(details)
-      
     const user = await this.prisma.user.findFirst({where:{email: details.email}})
     const trans = await this.prisma.transaction.findFirst({where:{userId: user.id, refId:details.tx_ref, status: "initiated"}})
     if(!trans) return {message: "no longer active"}
@@ -121,8 +120,8 @@ export class BillingService {
     const tx_ref = `autobill_${email}_${Date.now()}`
     const data = {
       token,
-      currency: 'NGN',
-      country: 'NG',
+      currency: 'USD',
+      country: 'US',
       amount,
       email,
       tx_ref,
