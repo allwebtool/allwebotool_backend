@@ -96,7 +96,7 @@ export class AuthService {
             data: {
                 userId: newUser.id,
                 amount: 0,
-                points: 50,
+                points: 25,
                 type: 'credit',
                 status: 'successful',
             },
